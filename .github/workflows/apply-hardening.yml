@@ -24,7 +24,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat tools/patches/part* > /tmp/smart-denoise-hardening.patch
+          cat tools/patches/b64-* | tr -d '\r\n' | base64 -d > /tmp/smart-denoise-hardening.patch
           git apply --check --whitespace=nowarn /tmp/smart-denoise-hardening.patch
 
       - name: Apply hardened source snapshot
