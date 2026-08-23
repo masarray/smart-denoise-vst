@@ -19,7 +19,7 @@ check("Primary Reduce Noise macro", '"Reduce Noise"' in editor_cpp and 'setName 
 check("Preserve Detail control", '"Preserve Detail"' in editor_cpp)
 check("Silence Clean-up control", '"Silence Clean-up"' in editor_cpp)
 check("Learn Noise 3s workflow", '"Learn Noise\\n3s"' in editor_h and "startNoiseLearn" in editor_cpp)
-check("Frozen profile feedback", '"FROZEN PROFILE"' in editor_cpp and '"Frozen"' in editor_cpp)
+check("Frozen profile feedback", '"FROZEN PROFILE"' in editor_cpp and "Frozen" in editor_cpp)
 check("Hear Removed monitoring", '"Hear Removed"' in editor_h and '"hearRemoved"' in editor_cpp)
 check("Host-safe bypass uses existing enabled parameter", 'getParameter (\n                "enabled")' in editor_cpp)
 check("P3 Detail Guard feedback", '"P3 DETAIL GUARD"' in editor_cpp and "analysis.detailProtection" in editor_cpp)
