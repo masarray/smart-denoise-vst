@@ -1007,37 +1007,38 @@ SmartDenoiseAudioProcessorEditor (
     advancedStatus.setJustificationType (
         juce::Justification::centredLeft);
 
-    for (auto* component : {
-             static_cast<juce::Component*> (&title),
-             &profileStatus,
-             &profileName,
-             &abButton,
-             &undoButton,
-             &redoButton,
-             &helpButton,
-             &learn,
-             &hearRemoved,
-             &bypass,
-             &advanced,
-             &quality,
-             &reduction,
-             &preserve,
-             &silence,
-             &profileOffset,
-             &reductionLabel,
-             &preserveLabel,
-             &silenceLabel,
-             &profileOffsetLabel,
-             &learnPopupTitle,
-             &learnPopupInstruction,
-             &learnPopupStatus,
-             &learnPopupClose,
-             &advancedTitle,
-             &advancedStatus,
-             &advancedClose })
-    {
+    const std::array<juce::Component*, 27> components {
+        &title,
+        &profileStatus,
+        &profileName,
+        &abButton,
+        &undoButton,
+        &redoButton,
+        &helpButton,
+        &learn,
+        &hearRemoved,
+        &bypass,
+        &advanced,
+        &quality,
+        &reduction,
+        &preserve,
+        &silence,
+        &profileOffset,
+        &reductionLabel,
+        &preserveLabel,
+        &silenceLabel,
+        &profileOffsetLabel,
+        &learnPopupTitle,
+        &learnPopupInstruction,
+        &learnPopupStatus,
+        &learnPopupClose,
+        &advancedTitle,
+        &advancedStatus,
+        &advancedClose
+    };
+
+    for (auto* component : components)
         addAndMakeVisible (component);
-    }
 
     auto& state = processor.getParameters();
 
