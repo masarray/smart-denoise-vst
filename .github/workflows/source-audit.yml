@@ -9,16 +9,61 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  source-audit:
-    name: Source + math QA
+  p3-apply:
+    name: Apply staged P3 patch
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Apply P3 when marker exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f tools/p3/READY ]]; then
+            echo "No P3 staging marker; nothing to apply."
+            exit 0
+          fi
+
+          python tools/p3/apply_p3.py
+          git diff --check
+          grep -q "processDetailFrame" Source/DSP/SmartDenoiseEngine.cpp
+          grep -q "gainHistoryOne" Source/DSP/SmartDenoiseEngine.h
+          grep -q "detailProtection" Source/DSP/SmartDenoiseEngine.h
+
+          python qa/verify_p0_p2_contract.py
+          python qa/verify_p2_math.py
+
+          rm -rf tools/p3 tools/patches
+          rm -f .github/workflows/apply-p3.yml .github/workflows/apply-hardening.yml
+
+          git config user.name "smart-denoise-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "P3: add multi-resolution detail guard and gain consensus"
+          git push origin "HEAD:${{ github.head_ref || github.ref_name }}"
+
+  source-audit:
+    name: Source + math QA
+    needs: p3-apply
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - uses: actions/setup-python@v7
         with:
@@ -30,6 +75,15 @@ jobs:
       - name: Validate P2 mathematical behavior
         run: python qa/verify_p2_math.py
 
+      - name: Validate P3 source contract when present
+        shell: bash
+        run: |
+          if [[ -f qa/verify_p3_source.py ]]; then
+            python qa/verify_p3_source.py
+          else
+            echo "P3 source QA not added yet."
+          fi
+
   windows-build:
     name: Windows VST3 + Standalone + pluginval
     needs: source-audit
@@ -38,6 +92,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Configure
         shell: pwsh
