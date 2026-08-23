@@ -1,14 +1,18 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(SmartDenoise VERSION 0.2.0 LANGUAGES CXX)
+set(SMART_DENOISE_VERSION "0.3.0" CACHE STRING "Smart Denoise semantic version")
+project(SmartDenoise VERSION ${SMART_DENOISE_VERSION} LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(FetchContent)
+include(CTest)
 
 set(SMART_DENOISE_JUCE_TAG "8.0.15" CACHE STRING "JUCE git tag to build against")
+option(SMART_DENOISE_BUILD_TESTS "Build deterministic engine tests" ON)
+
 FetchContent_Declare(
     JUCE
     GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
@@ -17,6 +21,11 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(JUCE)
 
+set(SMART_DENOISE_ENGINE_SOURCES
+    Source/DSP/SmartDenoiseEngine.cpp
+    Source/DSP/SmartDenoiseEngine.h
+)
+
 juce_add_plugin(SmartDenoise
     COMPANY_NAME "Masarray"
     BUNDLE_ID "com.masarray.smartdenoise"
@@ -24,6 +33,7 @@ juce_add_plugin(SmartDenoise
     PLUGIN_CODE SDns
     FORMATS VST3 Standalone
     PRODUCT_NAME "Smart Denoise"
+    VERSION ${PROJECT_VERSION}
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
     IS_SYNTH FALSE
@@ -31,8 +41,7 @@ juce_add_plugin(SmartDenoise
 )
 
 target_sources(SmartDenoise PRIVATE
-    Source/DSP/SmartDenoiseEngine.cpp
-    Source/DSP/SmartDenoiseEngine.h
+    ${SMART_DENOISE_ENGINE_SOURCES}
     Source/Plugin/PluginProcessor.cpp
     Source/Plugin/PluginProcessor.h
     Source/Plugin/PluginEditor.cpp
@@ -55,3 +64,34 @@ target_link_libraries(SmartDenoise PRIVATE
     juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags
 )
+
+if(SMART_DENOISE_BUILD_TESTS)
+    juce_add_console_app(SmartDenoiseTests
+        PRODUCT_NAME "Smart Denoise Tests"
+    )
+
+    target_sources(SmartDenoiseTests PRIVATE
+        ${SMART_DENOISE_ENGINE_SOURCES}
+        tests/SmartDenoiseTests.cpp
+    )
+
+    target_include_directories(SmartDenoiseTests PRIVATE Source)
+
+    target_compile_definitions(SmartDenoiseTests PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+    )
+
+    target_link_libraries(SmartDenoiseTests PRIVATE
+        juce::juce_audio_basics
+        juce::juce_core
+        PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags
+    )
+
+    add_test(
+        NAME SmartDenoise.Engine
+        COMMAND SmartDenoiseTests
+    )
+endif()
