@@ -73,7 +73,12 @@ float robustCentre (
 
 void SmartDenoiseEngine::FixedFft::configure (int newSize) noexcept
 {
-    size = newSize >= 2048 ? 2048 : 1024;
+    if (newSize >= 2048)
+        size = 2048;
+    else if (newSize >= 1024)
+        size = 1024;
+    else
+        size = 512;
 
     stages = 0;
     for (int value = size; value > 1; value >>= 1)
@@ -268,6 +273,7 @@ float SmartDenoiseEngine::SubsonicFilter::process (
 SmartDenoiseEngine::SmartDenoiseEngine()
 {
     fixedFft.configure (1024);
+    detailFft.configure (detailFftSize);
     resetSpectralState();
     clearFrameAnalysis();
 }
@@ -298,6 +304,11 @@ void SmartDenoiseEngine::resetSpectralState() noexcept
     tonalityState.fill (0.0f);
     linkedPreviousMagnitude.fill (0.0f);
     binTransientProbability.fill (0.0f);
+    gainHistoryOne.fill (1.0f);
+    gainHistoryTwo.fill (1.0f);
+    detailPreviousMagnitude.fill (0.0f);
+    detailProtectionState.fill (0.0f);
+    detailTailMemory.fill (0.0f);
 }
 
 void SmartDenoiseEngine::reset() noexcept
@@ -314,6 +325,10 @@ void SmartDenoiseEngine::reset() noexcept
         channel.fill (0.0f);
     for (auto& channel : previousMagnitude)
         channel.fill (0.0f);
+    for (auto& channel : detailInputRing)
+        channel.fill (0.0f);
+    for (auto& channel : detailWork)
+        channel.fill (0.0f);
 
     resetSpectralState();
 
@@ -324,6 +339,9 @@ void SmartDenoiseEngine::reset() noexcept
     outputReadPos = 0;
     hopCounter = 0;
     samplesSeen = 0;
+    detailInputWritePos = 0;
+    detailHopCounter = 0;
+    detailSamplesSeen = 0;
 
     learningFramesCaptured = 0;
     learningFramesAccepted = 0;
@@ -347,6 +365,8 @@ void SmartDenoiseEngine::clearFrameAnalysis() noexcept
     frameProgramPresence.store (1.0f);
     frameResidualNoiseDb.store (-120.0f);
     frameSpectralReductionDb.store (0.0f);
+    frameDetailProtection.store (0.0f);
+    frameTailProtection.store (0.0f);
 }
 
 void SmartDenoiseEngine::invalidateProfile() noexcept
@@ -394,6 +414,10 @@ SmartDenoiseEngine::getFrameAnalysis() const noexcept
         frameResidualNoiseDb.load();
     result.spectralReductionDb =
         frameSpectralReductionDb.load();
+    result.detailProtection =
+        frameDetailProtection.load();
+    result.tailProtection =
+        frameTailProtection.load();
 
     return result;
 }
@@ -617,6 +641,18 @@ void SmartDenoiseEngine::reconfigureIfNeeded() noexcept
                 / static_cast<float> (fftSize));
 
         window[static_cast<size_t> (i)] =
+            std::sqrt (juce::jmax (0.0f, hann));
+    }
+
+    for (int i = 0; i < detailFftSize; ++i)
+    {
+        const auto hann =
+            0.5f
+            - 0.5f * std::cos (
+                juce::MathConstants<float>::twoPi
+                * static_cast<float> (i)
+                / static_cast<float> (detailFftSize));
+        detailWindow[static_cast<size_t> (i)] =
             std::sqrt (juce::jmax (0.0f, hann));
     }
 }
@@ -1326,6 +1362,111 @@ float SmartDenoiseEngine::calculateLinkedGain (
         target);
 }
 
+
+float SmartDenoiseEngine::detailProtectionForPrimaryBin (int bin) const noexcept
+{
+    const float detailPosition =
+        static_cast<float> (bin * detailFftSize)
+        / static_cast<float> (fftSize);
+    const int lower = juce::jlimit (1, detailBins - 2,
+                                    static_cast<int> (detailPosition));
+    const int upper = juce::jmin (detailBins - 2, lower + 1);
+    const float fraction = juce::jlimit (0.0f, 1.0f,
+                                         detailPosition - static_cast<float> (lower));
+    return juce::jlimit (0.0f, 1.0f,
+        detailProtectionState[static_cast<size_t> (lower)]
+        + fraction * (detailProtectionState[static_cast<size_t> (upper)]
+                    - detailProtectionState[static_cast<size_t> (lower)]));
+}
+
+float SmartDenoiseEngine::tailProtectionForPrimaryBin (int bin) const noexcept
+{
+    const float detailPosition =
+        static_cast<float> (bin * detailFftSize)
+        / static_cast<float> (fftSize);
+    const int lower = juce::jlimit (1, detailBins - 2,
+                                    static_cast<int> (detailPosition));
+    const int upper = juce::jmin (detailBins - 2, lower + 1);
+    const float fraction = juce::jlimit (0.0f, 1.0f,
+                                         detailPosition - static_cast<float> (lower));
+    return juce::jlimit (0.0f, 1.0f,
+        detailTailMemory[static_cast<size_t> (lower)]
+        + fraction * (detailTailMemory[static_cast<size_t> (upper)]
+                    - detailTailMemory[static_cast<size_t> (lower)]));
+}
+
+void SmartDenoiseEngine::processDetailFrame() noexcept
+{
+    const int rightChannel = juce::jmin (1, channelCount - 1);
+    std::array<float, detailBins> linkedMagnitude {};
+
+    for (int channel = 0; channel < channelCount; ++channel)
+    {
+        auto& work = detailWork[static_cast<size_t> (channel)];
+        std::fill (work.begin(), work.end(), 0.0f);
+
+        for (int i = 0; i < detailFftSize; ++i)
+        {
+            int sourceIndex = detailInputWritePos + i;
+            if (sourceIndex >= detailFftSize)
+                sourceIndex -= detailFftSize;
+            work[static_cast<size_t> (i)] =
+                detailInputRing[static_cast<size_t> (channel)]
+                               [static_cast<size_t> (sourceIndex)]
+                * detailWindow[static_cast<size_t> (i)];
+        }
+
+        detailFft.forward (work.data());
+    }
+
+    for (int bin = 0; bin < detailBins; ++bin)
+    {
+        const auto index = static_cast<size_t> (bin);
+        const auto magnitudeFor = [&] (int channel)
+        {
+            const auto& work = detailWork[static_cast<size_t> (channel)];
+            const float real = work[static_cast<size_t> (bin * 2)];
+            const float imaginary = work[static_cast<size_t> (bin * 2 + 1)];
+            return std::sqrt (real * real + imaginary * imaginary + kFloor);
+        };
+
+        linkedMagnitude[index] =
+            0.5f * (magnitudeFor (0) + magnitudeFor (rightChannel));
+    }
+
+    const float tailDecay = std::exp (
+        -static_cast<float> (detailHopSize)
+        / static_cast<float> (sampleRate * 0.240));
+
+    for (int bin = 1; bin < detailBins - 1; ++bin)
+    {
+        const auto index = static_cast<size_t> (bin);
+        const float current = linkedMagnitude[index];
+        const float previous = detailPreviousMagnitude[index];
+        const float riseRatio = juce::jmax (0.0f, current - previous)
+                              / (previous + 0.10f * current + 1.0e-9f);
+        const float transient = smoothStep ((riseRatio - 0.06f) / 1.10f);
+
+        const float neighbour = 0.5f
+            * (linkedMagnitude[static_cast<size_t> (bin - 1)]
+             + linkedMagnitude[static_cast<size_t> (bin + 1)]);
+        const float tonality = smoothStep (
+            (current / (neighbour + 1.0e-9f) - 1.10f) / 1.45f);
+        const float tonalAttack = tonality
+            * smoothStep ((riseRatio - 0.015f) / 0.55f);
+        const float instant = juce::jlimit (0.0f, 1.0f,
+                                            juce::jmax (transient, 0.76f * tonalAttack));
+
+        auto& state = detailProtectionState[index];
+        const float alpha = instant > state ? 0.78f : 0.20f;
+        state += alpha * (instant - state);
+
+        auto& tail = detailTailMemory[index];
+        tail = juce::jmax (state, tail * tailDecay);
+        detailPreviousMagnitude[index] = current;
+    }
+}
+
 void SmartDenoiseEngine::processFrame() noexcept
 {
     const int bins = fftSize / 2 + 1;
@@ -1559,11 +1700,17 @@ void SmartDenoiseEngine::processFrame() noexcept
             static_cast<size_t> (bin)]
             = tonality;
 
+        const float detailGuard =
+            detailProtectionForPrimaryBin (bin);
+        const float tailGuard =
+            tailProtectionForPrimaryBin (bin);
         const float localTransient =
             juce::jmax (
-                0.64f * transientScore,
-                binTransientProbability[
-                    static_cast<size_t> (bin)]);
+                juce::jmax (
+                    0.64f * transientScore,
+                    binTransientProbability[
+                        static_cast<size_t> (bin)]),
+                juce::jmax (detailGuard, 0.55f * tailGuard));
 
         rawGains[
             static_cast<size_t> (bin)]
@@ -1664,6 +1811,41 @@ void SmartDenoiseEngine::processFrame() noexcept
             static_cast<size_t> (bin)]
             = rawGains[
                 static_cast<size_t> (bin)];
+    }
+
+    float p3ProtectionWeight = 0.0f;
+    float p3DetailSum = 0.0f;
+    float p3TailSum = 0.0f;
+
+    // P3 three-frame gain consensus only lifts isolated deep holes; it never
+    // creates extra attenuation. Short-window detail/tail protection relaxes
+    // the consensus so attacks can return immediately toward unity.
+    for (int bin = 1; bin < bins - 1; ++bin)
+    {
+        const auto index = static_cast<size_t> (bin);
+        const float current = smoothedGains[index];
+        const float historyOne = gainHistoryOne[index];
+        const float historyTwo = gainHistoryTwo[index];
+        const float minimum = juce::jmin (current, juce::jmin (historyOne, historyTwo));
+        const float maximum = juce::jmax (current, juce::jmax (historyOne, historyTwo));
+        const float median = current + historyOne + historyTwo - minimum - maximum;
+        const float lifted = juce::jmax (current, median);
+        const float detailGuard = detailProtectionForPrimaryBin (bin);
+        const float tailGuard = tailProtectionForPrimaryBin (bin);
+        const float wantedGuard = juce::jlimit (0.0f, 1.0f,
+                                                juce::jmax (detailGuard, 0.65f * tailGuard));
+        const float consensusStrength = 0.86f * (1.0f - wantedGuard);
+        smoothedGains[index] = current + consensusStrength * (lifted - current);
+        gainHistoryTwo[index] = historyOne;
+        gainHistoryOne[index] = current;
+
+        const float weight = detectorFrequencyWeight (bin);
+        if (weight > 0.0f)
+        {
+            p3ProtectionWeight += weight;
+            p3DetailSum += weight * detailGuard;
+            p3TailSum += weight * tailGuard;
+        }
     }
 
     float reductionWeight = 0.0f;
@@ -1874,13 +2056,19 @@ void SmartDenoiseEngine::processFrame() noexcept
                      - 0.25f)
                     / 0.55f));
 
+        const float averageDetailProtection =
+            p3ProtectionWeight > 0.0f ? p3DetailSum / p3ProtectionWeight : 0.0f;
+        const float averageTailProtection =
+            p3ProtectionWeight > 0.0f ? p3TailSum / p3ProtectionWeight : 0.0f;
         const float programPresence =
             juce::jlimit (
                 0.0f,
                 1.0f,
-                0.52f * excessScore
-                + 0.35f * occupancyScore
-                + 0.13f * structureScore);
+                juce::jmax (
+                    0.52f * excessScore
+                    + 0.35f * occupancyScore
+                    + 0.13f * structureScore,
+                    0.48f * averageTailProtection));
 
         float residualNoiseDb =
             estimatedNoiseFloorDb.load();
@@ -1920,6 +2108,10 @@ void SmartDenoiseEngine::processFrame() noexcept
             reductionWeight > 0.0f
             ? reductionDbSum / reductionWeight
             : 0.0f);
+        frameDetailProtection.store (
+            p3ProtectionWeight > 0.0f ? p3DetailSum / p3ProtectionWeight : 0.0f);
+        frameTailProtection.store (
+            p3ProtectionWeight > 0.0f ? p3TailSum / p3ProtectionWeight : 0.0f);
     }
     else
     {
@@ -2248,8 +2440,8 @@ void SmartDenoiseEngine::applySmartExpander (
 void SmartDenoiseEngine::process (
     juce::AudioBuffer<float>& buffer) noexcept
 {
-    reconfigureIfNeeded();
-
+    // Quality/FFT reconfiguration is setup-level work and must never run
+    // from the real-time audio callback. prepare() is the authority.
     if (learnRequested.exchange (false))
         beginLearningOnAudioThread();
 
@@ -2302,6 +2494,11 @@ void SmartDenoiseEngine::process (
                 [static_cast<size_t> (
                     inputWritePos)]
                 = spectralInput;
+
+            detailInputRing[
+                static_cast<size_t> (channel)]
+                [static_cast<size_t> (detailInputWritePos)]
+                = spectralInput;
         }
 
         if (channels == 1)
@@ -2313,6 +2510,9 @@ void SmartDenoiseEngine::process (
                     static_cast<size_t> (
                         inputWritePos)];
 
+            detailInputRing[1][static_cast<size_t> (detailInputWritePos)] =
+                detailInputRing[0][static_cast<size_t> (detailInputWritePos)];
+
             dryDelayRing[1][
                 static_cast<size_t> (
                     dryWritePosition)]
@@ -2321,9 +2521,20 @@ void SmartDenoiseEngine::process (
 
         if (++inputWritePos >= fftSize)
             inputWritePos = 0;
+        if (++detailInputWritePos >= detailFftSize)
+            detailInputWritePos = 0;
 
         ++samplesSeen;
         ++hopCounter;
+        ++detailSamplesSeen;
+        ++detailHopCounter;
+
+        if (detailSamplesSeen >= detailFftSize
+            && detailHopCounter >= detailHopSize)
+        {
+            detailHopCounter = 0;
+            processDetailFrame();
+        }
 
         if (samplesSeen >= fftSize
             && hopCounter >= hopSize)

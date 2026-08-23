@@ -21,6 +21,8 @@ struct NoiseFrameAnalysis
     float programPresence = 1.0f;
     float residualNoiseDb = -120.0f;
     float spectralReductionDb = 0.0f;
+    float detailProtection = 0.0f;
+    float tailProtection = 0.0f;
 };
 
 class SmartDenoiseEngine
@@ -30,6 +32,9 @@ public:
     static constexpr int maxFftSize = 2048;
     static constexpr int maxBins = maxFftSize / 2 + 1;
     static constexpr int profileGroupCount = 7;
+    static constexpr int detailFftSize = 512;
+    static constexpr int detailBins = detailFftSize / 2 + 1;
+    static constexpr int detailHopSize = detailFftSize / 2;
     static constexpr float maxReductionDb = 24.0f;
 
     enum class Quality
@@ -113,6 +118,7 @@ private:
     void beginLearningOnAudioThread() noexcept;
     void accumulateLearningFrame (float framePower, float transientScore) noexcept;
     void finaliseLearningOnAudioThread() noexcept;
+    void processDetailFrame() noexcept;
     void processFrame() noexcept;
     void applySmartExpander (juce::AudioBuffer<float>& target) noexcept;
 
@@ -122,10 +128,13 @@ private:
 
     float frequencyWeight (int bin) const noexcept;
     float detectorFrequencyWeight (int bin) const noexcept;
+    float detailProtectionForPrimaryBin (int bin) const noexcept;
+    float tailProtectionForPrimaryBin (int bin) const noexcept;
     float calculateLinkedGain (int bin, float linkedPower,
                                float localTonality, float transientProtect) noexcept;
 
     FixedFft fixedFft;
+    FixedFft detailFft;
 
     double sampleRate = 48000.0;
     int channelCount = 2;
@@ -135,6 +144,9 @@ private:
     int outputReadPos = 0;
     int hopCounter = 0;
     std::int64_t samplesSeen = 0;
+    int detailInputWritePos = 0;
+    int detailHopCounter = 0;
+    std::int64_t detailSamplesSeen = 0;
 
     static constexpr int outputFifoSize = maxFftSize * 4;
 
@@ -153,6 +165,15 @@ private:
     std::array<float, maxBins> tonalityState {};
     std::array<float, maxBins> linkedPreviousMagnitude {};
     std::array<float, maxBins> binTransientProbability {};
+    std::array<float, maxBins> gainHistoryOne {};
+    std::array<float, maxBins> gainHistoryTwo {};
+
+    std::array<std::array<float, detailFftSize>, maxChannels> detailInputRing {};
+    std::array<std::array<float, detailFftSize * 2>, maxChannels> detailWork {};
+    std::array<float, detailBins> detailPreviousMagnitude {};
+    std::array<float, detailBins> detailProtectionState {};
+    std::array<float, detailBins> detailTailMemory {};
+    std::array<float, detailFftSize> detailWindow {};
 
     std::array<float, maxFftSize> window {};
     std::array<SubsonicFilter, maxChannels> subsonicFilters {};
@@ -191,6 +212,8 @@ private:
     std::atomic<float> frameProgramPresence { 1.0f };
     std::atomic<float> frameResidualNoiseDb { -120.0f };
     std::atomic<float> frameSpectralReductionDb { 0.0f };
+    std::atomic<float> frameDetailProtection { 0.0f };
+    std::atomic<float> frameTailProtection { 0.0f };
 
     int learningFramesTarget = 1;
     int learningFramesCaptured = 0;
