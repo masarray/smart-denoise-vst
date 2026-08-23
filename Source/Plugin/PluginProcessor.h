@@ -4,6 +4,8 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include <atomic>
+
 class SmartDenoiseAudioProcessor final
     : public juce::AudioProcessor
 {
@@ -57,9 +59,24 @@ public:
         return engine;
     }
 
+    const smartdenoise::SmartDenoiseEngine& getEngine() const
+    {
+        return engine;
+    }
+
     void startNoiseLearn()
     {
         engine.startLearning (3.0);
+    }
+
+    float getInputPeakDb() const noexcept
+    {
+        return inputPeakDb.load (std::memory_order_relaxed);
+    }
+
+    float getOutputPeakDb() const noexcept
+    {
+        return outputPeakDb.load (std::memory_order_relaxed);
     }
 
 private:
@@ -74,6 +91,9 @@ private:
 
     juce::String pendingProfile;
     int lastReportedLatency = -1;
+
+    std::atomic<float> inputPeakDb { -72.0f };
+    std::atomic<float> outputPeakDb { -72.0f };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (
         SmartDenoiseAudioProcessor)
