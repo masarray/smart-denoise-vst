@@ -1,0 +1,37 @@
+{
+  "package": "smart-denoise-p0-p2",
+  "version": "0.2.0-handoff",
+  "donor_repo": "masarray/Sonkupik-Live",
+  "donor_branch": "agent/p0-profile-relative-expander",
+  "donor_head": "2d86348e0f8cd699a8b05d2526c959f1946b6ac1",
+  "contains": [
+    "P0",
+    "P1",
+    "P2",
+    "JUCE VST3/Standalone scaffold",
+    "QA"
+  ],
+  "files": [
+    ".github/workflows/source-audit.yml",
+    ".gitignore",
+    "CMakeLists.txt",
+    "LICENSE",
+    "PUSH_TO_GITHUB.md",
+    "README.md",
+    "Source/DSP/SmartDenoiseEngine.cpp",
+    "Source/DSP/SmartDenoiseEngine.h",
+    "Source/Plugin/PluginEditor.cpp",
+    "Source/Plugin/PluginEditor.h",
+    "Source/Plugin/PluginProcessor.cpp",
+    "Source/Plugin/PluginProcessor.h",
+    "docs/ARCHITECTURE.md",
+    "docs/HANDOFF_FROM_SONKUPIK.md",
+    "qa/verify_p0_p2_contract.py",
+    "qa/verify_p2_math.py"
+  ],
+  "qa_status": {
+    "qa/verify_p0_p2_contract.py": "PASS",
+    "qa/verify_p2_math.py": "PASS"
+  },
+  "juce_pin": "8.0.15"
+}

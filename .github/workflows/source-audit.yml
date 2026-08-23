@@ -1,0 +1,27 @@
+name: Smart Denoise source audit
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate P0-P2 source contract
+        run: python qa/verify_p0_p2_contract.py
+
+      - name: Validate P2 mathematical behavior
+        run: python qa/verify_p2_math.py

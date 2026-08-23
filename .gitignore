@@ -1,0 +1,40 @@
+# CMake / IDE
+build/
+cmake-build-*/
+out/
+.vs/
+.vscode/
+.idea/
+CMakeUserPresets.json
+
+# Visual Studio
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+x64/
+Debug/
+Release/
+RelWithDebInfo/
+MinSizeRel/
+
+# JUCE generated
+JuceLibraryCode/
+*.jucer
+
+# Plugin / binaries
+*.vst3
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.lib
+*.exp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python QA
+__pycache__/
+*.pyc
