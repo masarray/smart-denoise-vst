@@ -1,0 +1,168 @@
+name: Build Smart Denoise Release
+
+on:
+  workflow_run:
+    workflows:
+      - "Smart Denoise CI"
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semantic version without v prefix (example: 0.3.0)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    name: Validate and release Windows VST3
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: windows-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Resolve release version
+        shell: pwsh
+        run: |
+          $requested = '${{ inputs.version }}'
+
+          if ('${{ github.event_name }}' -eq 'workflow_dispatch' -and $requested) {
+            $version = $requested
+          } else {
+            $match = Select-String `
+              -Path CMakeLists.txt `
+              -Pattern 'set\(SMART_DENOISE_VERSION\s+"([^"]+)"'
+
+            if ($null -eq $match) { throw 'SMART_DENOISE_VERSION not found in CMakeLists.txt' }
+            $version = $match.Matches[0].Groups[1].Value
+          }
+
+          if ($version -notmatch '^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$') {
+            throw "Invalid semantic version: $version"
+          }
+
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "RELEASE_TAG=v$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Source + mathematical QA
+        shell: pwsh
+        run: |
+          python qa/verify_p0_p2_contract.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python qa/verify_p2_math.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Configure
+        shell: pwsh
+        run: >
+          cmake -S . -B build -A x64
+          -DSMART_DENOISE_BUILD_TESTS=ON
+          -DSMART_DENOISE_VERSION=$env:VERSION
+
+      - name: Build Release
+        shell: pwsh
+        run: cmake --build build --config Release --parallel 2
+
+      - name: Engine black-box tests
+        shell: pwsh
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Locate products
+        shell: pwsh
+        run: |
+          $vst = Get-ChildItem -Path build -Recurse -Directory |
+            Where-Object { $_.Name -eq 'Smart Denoise.vst3' } |
+            Select-Object -First 1
+          $standalone = Get-ChildItem -Path build -Recurse -File -Filter 'Smart Denoise.exe' |
+            Where-Object { $_.FullName -match 'Standalone' } |
+            Select-Object -First 1
+          if ($null -eq $vst -or $null -eq $standalone) { throw 'Release products missing' }
+          "VST_PATH=$($vst.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "STANDALONE_PATH=$($standalone.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Download pluginval 1.0.4
+        shell: pwsh
+        run: |
+          Invoke-WebRequest `
+            -Uri 'https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Windows.zip' `
+            -OutFile pluginval.zip
+          Expand-Archive pluginval.zip -DestinationPath pluginval -Force
+          $pluginval = Get-ChildItem -Path pluginval -Recurse -File -Filter pluginval.exe |
+            Select-Object -First 1
+          if ($null -eq $pluginval) { throw 'pluginval.exe not found' }
+          "PLUGINVAL_PATH=$($pluginval.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Validate VST3
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force pluginval-logs | Out-Null
+          & "$env:PLUGINVAL_PATH" `
+            --validate-in-process `
+            --strictness-level 5 `
+            --skip-gui-tests `
+            --output-dir "$PWD/pluginval-logs" `
+            "$env:VST_PATH"
+          if ($LASTEXITCODE -ne 0) { throw "pluginval failed with exit code $LASTEXITCODE" }
+
+      - name: Create release packages
+        shell: pwsh
+        run: |
+          $vstStage = Join-Path $PWD 'release-vst3'
+          $standaloneStage = Join-Path $PWD 'release-standalone'
+          New-Item -ItemType Directory -Force $vstStage | Out-Null
+          New-Item -ItemType Directory -Force $standaloneStage | Out-Null
+          Copy-Item -Recurse -Force "$env:VST_PATH" $vstStage/
+          Copy-Item -Force "$env:STANDALONE_PATH" $standaloneStage/
+          Compress-Archive -Path "$vstStage/*" -DestinationPath "Smart-Denoise-VST3-$env:RELEASE_TAG-Windows-x64.zip" -Force
+          Compress-Archive -Path "$standaloneStage/*" -DestinationPath "Smart-Denoise-Standalone-$env:RELEASE_TAG-Windows-x64.zip" -Force
+          if (Test-Path 'pluginval-logs/*') {
+            Compress-Archive -Path "pluginval-logs/*" -DestinationPath "Smart-Denoise-pluginval-$env:RELEASE_TAG.zip" -Force
+          } else {
+            Set-Content -Path pluginval-empty.txt -Value 'pluginval produced no log file'
+            Compress-Archive -Path pluginval-empty.txt -DestinationPath "Smart-Denoise-pluginval-$env:RELEASE_TAG.zip" -Force
+          }
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: Smart-Denoise-${{ env.RELEASE_TAG }}-Windows-x64
+          path: |
+            Smart-Denoise-VST3-${{ env.RELEASE_TAG }}-Windows-x64.zip
+            Smart-Denoise-Standalone-${{ env.RELEASE_TAG }}-Windows-x64.zip
+            Smart-Denoise-pluginval-${{ env.RELEASE_TAG }}.zip
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $files = @(
+            "Smart-Denoise-VST3-$env:RELEASE_TAG-Windows-x64.zip",
+            "Smart-Denoise-Standalone-$env:RELEASE_TAG-Windows-x64.zip",
+            "Smart-Denoise-pluginval-$env:RELEASE_TAG.zip"
+          )
+          gh release view "$env:RELEASE_TAG" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "$env:RELEASE_TAG" @files --clobber
+          } else {
+            gh release create "$env:RELEASE_TAG" @files `
+              --target "${{ github.event.workflow_run.head_sha || github.sha }}" `
+              --title "Smart Denoise $env:RELEASE_TAG" `
+              --generate-notes
+          }
