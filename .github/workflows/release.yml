@@ -66,13 +66,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python qa/verify_p2_math.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python qa/verify_p3_source.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python qa/verify_p3_math.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Configure
         shell: pwsh
-        run: >
-          cmake -S . -B build -A x64
-          -DSMART_DENOISE_BUILD_TESTS=ON
-          -DSMART_DENOISE_VERSION=$env:VERSION
+        run: |
+          cmake -S . -B build -A x64 `
+            -DSMART_DENOISE_BUILD_TESTS=ON `
+            "-DSMART_DENOISE_VERSION=$env:VERSION"
 
       - name: Build Release
         shell: pwsh
@@ -111,13 +115,25 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force pluginval-logs | Out-Null
-          & "$env:PLUGINVAL_PATH" `
-            --validate-in-process `
-            --strictness-level 5 `
-            --skip-gui-tests `
-            --output-dir "$PWD/pluginval-logs" `
-            "$env:VST_PATH"
-          if ($LASTEXITCODE -ne 0) { throw "pluginval failed with exit code $LASTEXITCODE" }
+
+          $arguments = @(
+            '--validate-in-process',
+            '--strictness-level', '5',
+            '--skip-gui-tests',
+            '--output-dir', ('"' + "$PWD/pluginval-logs" + '"'),
+            ('"' + "$env:VST_PATH" + '"')
+          )
+
+          $process = Start-Process `
+            -FilePath "$env:PLUGINVAL_PATH" `
+            -ArgumentList $arguments `
+            -NoNewWindow `
+            -Wait `
+            -PassThru
+
+          if ($process.ExitCode -ne 0) {
+            throw "pluginval failed with exit code $($process.ExitCode)"
+          }
 
       - name: Create release packages
         shell: pwsh
