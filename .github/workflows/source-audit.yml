@@ -75,14 +75,11 @@ jobs:
       - name: Validate P2 mathematical behavior
         run: python qa/verify_p2_math.py
 
-      - name: Validate P3 source contract when present
-        shell: bash
-        run: |
-          if [[ -f qa/verify_p3_source.py ]]; then
-            python qa/verify_p3_source.py
-          else
-            echo "P3 source QA not added yet."
-          fi
+      - name: Validate P3 source contract
+        run: python qa/verify_p3_source.py
+
+      - name: Validate P3 behavior model
+        run: python qa/verify_p3_math.py
 
   windows-build:
     name: Windows VST3 + Standalone + pluginval
