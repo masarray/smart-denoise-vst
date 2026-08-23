@@ -36,6 +36,9 @@ jobs:
       - name: Validate P3 behavior model
         run: python qa/verify_p3_math.py
 
+      - name: Validate Concept C UI contract
+        run: python qa/verify_concept_c_ui.py
+
   windows-build:
     name: Windows VST3 + Standalone + pluginval
     needs: source-audit
