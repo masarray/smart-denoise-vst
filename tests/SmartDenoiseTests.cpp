@@ -242,6 +242,53 @@ void testAttenuationAndProtection (TestContext& t)
     t.expect (wantedRms > wantedDryRms * 0.70, "Strong harmonic program is protected from deep reduction");
 }
 
+void testP3FrozenProfileAndDetailGuard (TestContext& t)
+{
+    smartdenoise::SmartDenoiseEngine engine;
+    engine.prepare (sampleRate, blockSize, 2);
+    engine.setSilenceAmount (0.0f);
+    engine.setReductionDb (12.0f);
+    engine.setPreserve (0.80f);
+    learnStationaryProfile (engine);
+    t.expect (engine.hasProfile(), "P3 test has learned frozen profile");
+
+    const auto before = engine.serialiseProfile();
+    t.expect (before.isNotEmpty(), "P3 precondition profile serialises");
+
+    juce::AudioBuffer<float> buffer (2, blockSize);
+    const std::int64_t start = static_cast<std::int64_t> (sampleRate * 3.6);
+    float maxDetail = 0.0f;
+    float maxTail = 0.0f;
+
+    for (int block = 0; block < 220; ++block)
+    {
+        buffer.clear();
+        for (int sample = 0; sample < blockSize; ++sample)
+        {
+            const auto n = start + static_cast<std::int64_t> (block * blockSize + sample);
+            const int cycle = static_cast<int> (n % 4096);
+            const float attackEnv = cycle < 96 ? 1.0f - static_cast<float> (cycle) / 96.0f : 0.0f;
+            const double time = static_cast<double> (n) / sampleRate;
+            const float attack = 0.18f * attackEnv
+                * std::sin (static_cast<float> (juce::MathConstants<double>::twoPi * 3100.0 * time));
+            const float value = stationarySample (n) + attack;
+            buffer.setSample (0, sample, value);
+            buffer.setSample (1, sample, value);
+        }
+
+        engine.process (buffer);
+        const auto analysis = engine.getFrameAnalysis();
+        maxDetail = std::max (maxDetail, analysis.detailProtection);
+        maxTail = std::max (maxTail, analysis.tailProtection);
+    }
+
+    const auto after = engine.serialiseProfile();
+    t.expect (after == before, "P3 detail analysis never mutates frozen learned profile");
+    t.expect (maxDetail > 0.01f, "P3 short-window Detail Guard activates on repeated attacks");
+    t.expect (maxTail > 0.01f, "P3 tail memory activates after wanted detail");
+    t.expect (engine.getLatencySamples() == 1024, "P3 secondary FFT adds no reported latency");
+}
+
 void testFiniteOutput (TestContext& t)
 {
     smartdenoise::SmartDenoiseEngine engine;
@@ -276,6 +323,7 @@ int main()
     testLearningAndPersistence (tests);
     testRejectedRelearnKeepsProfile (tests);
     testAttenuationAndProtection (tests);
+    testP3FrozenProfileAndDetailGuard (tests);
     testFiniteOutput (tests);
     std::cout << "====================================\nFailures: " << tests.failures << '\n';
     return tests.failures == 0 ? 0 : 1;
