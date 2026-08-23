@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <functional>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -168,16 +169,16 @@ void testLearningAndPersistence (TestContext& t)
     const auto encoded = engine.serialiseProfile();
     t.expect (encoded.isNotEmpty(), "Valid profile serialises");
 
-    smartdenoise::SmartDenoiseEngine restored;
-    restored.setQuality (smartdenoise::SmartDenoiseEngine::Quality::live1024);
-    restored.prepare (sampleRate, blockSize, 2);
-    t.expect (restored.restoreProfile (encoded), "Compatible engine restores learned profile");
-    t.expect (restored.hasProfile(), "Restored profile becomes active");
+    auto restored = std::make_unique<smartdenoise::SmartDenoiseEngine>();
+    restored->setQuality (smartdenoise::SmartDenoiseEngine::Quality::live1024);
+    restored->prepare (sampleRate, blockSize, 2);
+    t.expect (restored->restoreProfile (encoded), "Compatible engine restores learned profile");
+    t.expect (restored->hasProfile(), "Restored profile becomes active");
 
-    smartdenoise::SmartDenoiseEngine incompatible;
-    incompatible.setQuality (smartdenoise::SmartDenoiseEngine::Quality::clean2048);
-    incompatible.prepare (sampleRate, blockSize, 2);
-    t.expect (! incompatible.restoreProfile (encoded), "FFT-grid mismatch rejects profile restore");
+    auto incompatible = std::make_unique<smartdenoise::SmartDenoiseEngine>();
+    incompatible->setQuality (smartdenoise::SmartDenoiseEngine::Quality::clean2048);
+    incompatible->prepare (sampleRate, blockSize, 2);
+    t.expect (! incompatible->restoreProfile (encoded), "FFT-grid mismatch rejects profile restore");
 }
 
 void testRejectedRelearnKeepsProfile (TestContext& t)
