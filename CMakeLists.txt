@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-set(SMART_DENOISE_VERSION "0.3.0" CACHE STRING "Smart Denoise semantic version")
+set(SMART_DENOISE_VERSION "0.4.0" CACHE STRING "Smart Denoise semantic version")
 project(SmartDenoise VERSION ${SMART_DENOISE_VERSION} LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)

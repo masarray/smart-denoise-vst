@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.4.0 - P4 Visual Fidelity
+
+### Concept C premium polish
+- Reworked the runtime skin to match the selected Concept C proposal more closely while keeping the proven three-step Capture → Clean → Check geometry.
+- Replaced the flat bright Learn card with a dark glass-like hero action, violet/blue luminous border, waveform capture icon and softer depth treatment.
+- Upgraded the primary Reduce Noise macro with a thicker gradient arc, glow pass, radial inner disc, visual ticks, white marker and explicit percentage readout.
+- Preserve Detail and Silence Clean-up now use the same visual family and display percentages instead of raw 0..1 values.
+- Improved typography hierarchy, spacing, panel depth, inner highlights and restrained graphite/navy surfaces.
+- Added dedicated Hear Removed and Bypass icon language.
+- Upgraded segmented input/output meters with scale ticks, glow and cleaner readouts.
+- P3 Detail Guard and Tail Protect telemetry now use compact live status bars.
+- Reworked the activity strip into a centered low-glow monitoring visualization.
+- Polished Learn popup, Advanced drawer, quality selector and footer to use the same visual language.
+
+### Product safety
+- No DSP algorithm or parameter ID changes.
+- Frozen Learn Noise profile remains the authority.
+- P3 Detail Guard / Tail Protect remain telemetry/protection intelligence only.
+- No mutex, file I/O or dynamic container was added to the audio callback.
+
+### Validation / delivery
+- Added deterministic P4 visual-fidelity source contract.
+- CI continues to require P0-P3 QA, native Windows build, C++ black-box tests and pluginval strictness 5.
+- Release workflow repeats Concept C + P4 gates before public publishing.
+- Target public release: v0.4.0.
+
 ## 0.3.0 - release candidate
 
 ### Smart Denoise P0-P2

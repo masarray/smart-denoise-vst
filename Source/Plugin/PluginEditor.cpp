@@ -5,18 +5,26 @@
 
 namespace
 {
-const auto backgroundTop = juce::Colour::fromRGB (8, 11, 18);
-const auto backgroundBottom = juce::Colour::fromRGB (13, 20, 34);
-const auto surface = juce::Colour::fromRGB (15, 20, 29);
-const auto surfaceRaised = juce::Colour::fromRGB (19, 25, 36);
-const auto surfaceSoft = juce::Colour::fromRGB (24, 30, 43);
-const auto border = juce::Colour::fromRGB (43, 50, 68);
-const auto textPrimary = juce::Colour::fromRGB (242, 244, 250);
-const auto textSecondary = juce::Colour::fromRGB (145, 153, 175);
-const auto accentPurple = juce::Colour::fromRGB (151, 91, 255);
-const auto accentBlue = juce::Colour::fromRGB (67, 137, 255);
-const auto accentCyan = juce::Colour::fromRGB (79, 198, 255);
-const auto warning = juce::Colour::fromRGB (255, 177, 74);
+namespace ui
+{
+const auto backgroundTop = juce::Colour::fromRGB (6, 9, 16);
+const auto backgroundBottom = juce::Colour::fromRGB (11, 17, 29);
+const auto surface = juce::Colour::fromRGB (12, 17, 26);
+const auto surfaceRaised = juce::Colour::fromRGB (16, 22, 34);
+const auto surfaceSoft = juce::Colour::fromRGB (22, 29, 43);
+const auto surfaceBright = juce::Colour::fromRGB (29, 37, 54);
+const auto border = juce::Colour::fromRGB (47, 57, 78);
+const auto borderSoft = juce::Colour::fromRGB (31, 40, 57);
+const auto textPrimary = juce::Colour::fromRGB (246, 247, 251);
+const auto textSecondary = juce::Colour::fromRGB (151, 160, 184);
+const auto textMuted = juce::Colour::fromRGB (98, 108, 134);
+const auto accentPurple = juce::Colour::fromRGB (166, 96, 255);
+const auto accentBlue = juce::Colour::fromRGB (76, 130, 255);
+const auto accentCyan = juce::Colour::fromRGB (80, 204, 255);
+const auto warning = juce::Colour::fromRGB (255, 178, 82);
+
+constexpr float panelRadius = 12.0f;
+constexpr float controlRadius = 10.0f;
 
 juce::ColourGradient accentGradient (juce::Rectangle<float> area)
 {
@@ -28,32 +36,173 @@ juce::ColourGradient accentGradient (juce::Rectangle<float> area)
         false);
 }
 
+juce::ColourGradient panelGradient (juce::Rectangle<float> area, bool raised)
+{
+    const auto top = raised
+        ? juce::Colour::fromRGB (20, 27, 41)
+        : juce::Colour::fromRGB (14, 20, 31);
+
+    const auto bottom = raised
+        ? juce::Colour::fromRGB (12, 17, 27)
+        : juce::Colour::fromRGB (9, 14, 23);
+
+    return juce::ColourGradient (
+        top,
+        area.getTopLeft(),
+        bottom,
+        area.getBottomLeft(),
+        false);
+}
+
+void drawPanel (
+    juce::Graphics& g,
+    juce::Rectangle<float> area,
+    bool raised)
+{
+    juce::DropShadow (
+        juce::Colours::black.withAlpha (0.34f),
+        raised ? 12 : 8,
+        { 0, raised ? 4 : 2 })
+        .drawForRectangle (g, area.toNearestInt());
+
+    g.setGradientFill (panelGradient (area, raised));
+    g.fillRoundedRectangle (area, panelRadius);
+
+    g.setColour (
+        juce::Colours::white.withAlpha (
+            raised ? 0.045f : 0.028f));
+    g.drawRoundedRectangle (
+        area.reduced (1.0f),
+        panelRadius - 1.0f,
+        1.0f);
+
+    g.setColour (
+        border.withAlpha (
+            raised ? 0.74f : 0.58f));
+    g.drawRoundedRectangle (
+        area,
+        panelRadius,
+        1.0f);
+}
+
 void drawStepHeader (
     juce::Graphics& g,
     juce::Rectangle<int> area,
     int number,
     const juce::String& text)
 {
-    auto badge = area.removeFromLeft (26).toFloat().reduced (3.0f);
+    auto badge = area.removeFromLeft (28).toFloat().reduced (3.0f);
 
-    g.setColour (surfaceSoft);
+    g.setGradientFill (panelGradient (badge, true));
     g.fillEllipse (badge);
-    g.setColour (border.brighter (0.35f));
+    g.setColour (border.brighter (0.28f));
     g.drawEllipse (badge, 1.0f);
 
     g.setColour (textPrimary);
-    g.setFont (juce::FontOptions (11.5f));
+    g.setFont (juce::FontOptions (11.0f));
     g.drawText (
         juce::String (number),
         badge.toNearestInt(),
         juce::Justification::centred);
 
-    g.setColour (accentPurple.brighter (0.25f));
-    g.setFont (juce::FontOptions (12.5f));
+    g.setColour (accentPurple.brighter (0.22f));
+    g.setFont (juce::FontOptions (12.8f));
     g.drawText (
         text,
         area,
         juce::Justification::centredLeft);
+}
+
+void drawHeadphoneIcon (
+    juce::Graphics& g,
+    juce::Rectangle<float> area,
+    juce::Colour colour)
+{
+    auto icon = area.withSizeKeepingCentre (
+        juce::jmin (area.getWidth(), 28.0f),
+        juce::jmin (area.getHeight(), 28.0f));
+
+    const auto centre = icon.getCentre();
+    const float radius = icon.getWidth() * 0.34f;
+
+    juce::Path arc;
+    arc.addCentredArc (
+        centre.x,
+        centre.y + 2.0f,
+        radius,
+        radius,
+        0.0f,
+        juce::MathConstants<float>::pi * 1.15f,
+        juce::MathConstants<float>::pi * 1.85f,
+        true);
+
+    g.setColour (colour);
+    g.strokePath (arc, juce::PathStrokeType (2.0f));
+
+    g.fillRoundedRectangle (
+        icon.getX() + 3.0f,
+        centre.y + 2.0f,
+        4.0f,
+        10.0f,
+        2.0f);
+
+    g.fillRoundedRectangle (
+        icon.getRight() - 7.0f,
+        centre.y + 2.0f,
+        4.0f,
+        10.0f,
+        2.0f);
+}
+
+void drawBypassIcon (
+    juce::Graphics& g,
+    juce::Rectangle<float> area,
+    juce::Colour colour)
+{
+    auto icon = area.withSizeKeepingCentre (24.0f, 24.0f);
+
+    g.setColour (colour);
+    g.drawEllipse (icon.reduced (3.5f), 1.8f);
+    g.drawLine (
+        icon.getX() + 5.0f,
+        icon.getBottom() - 5.0f,
+        icon.getRight() - 5.0f,
+        icon.getY() + 5.0f,
+        1.8f);
+}
+
+void drawWaveformIcon (
+    juce::Graphics& g,
+    juce::Rectangle<float> area,
+    juce::Colour colour)
+{
+    auto icon = area.withSizeKeepingCentre (36.0f, 28.0f);
+    const auto cy = icon.getCentreY();
+
+    const std::array<float, 9> heights {
+        6.0f, 13.0f, 20.0f, 10.0f, 25.0f,
+        16.0f, 22.0f, 11.0f, 7.0f
+    };
+
+    const float step = icon.getWidth()
+        / static_cast<float> (heights.size());
+
+    g.setColour (colour);
+
+    for (size_t i = 0; i < heights.size(); ++i)
+    {
+        const float x =
+            icon.getX()
+            + step * (static_cast<float> (i) + 0.5f);
+
+        const float h = heights[i];
+        g.drawLine (
+            x,
+            cy - h * 0.5f,
+            x,
+            cy + h * 0.5f,
+            1.7f);
+    }
 }
 
 class ConceptCLookAndFeel final : public juce::LookAndFeel_V4
@@ -78,7 +227,7 @@ public:
             textPrimary);
         setColour (
             juce::PopupMenu::highlightedBackgroundColourId,
-            accentPurple.withAlpha (0.35f));
+            accentPurple.withAlpha (0.30f));
     }
 
     void drawRotarySlider (
@@ -109,10 +258,47 @@ public:
                 bounds.getHeight());
 
         const float radius =
-            diameter * (primary ? 0.43f : 0.40f);
+            diameter * (primary ? 0.425f : 0.39f);
 
         const auto centre = bounds.getCentre();
-        const float stroke = primary ? 10.0f : 6.0f;
+        const float stroke = primary ? 12.0f : 7.0f;
+
+        if (primary)
+        {
+            constexpr int tickCount = 25;
+
+            for (int i = 0; i < tickCount; ++i)
+            {
+                const float t =
+                    static_cast<float> (i)
+                    / static_cast<float> (tickCount - 1);
+
+                const float angle =
+                    startAngle
+                    + t * (endAngle - startAngle);
+
+                const auto p1 =
+                    centre.getPointOnCircumference (
+                        radius + 14.0f,
+                        angle);
+
+                const auto p2 =
+                    centre.getPointOnCircumference (
+                        radius + (i % 4 == 0 ? 19.0f : 17.0f),
+                        angle);
+
+                g.setColour (
+                    textMuted.withAlpha (
+                        i % 4 == 0 ? 0.52f : 0.28f));
+
+                g.drawLine (
+                    p1.x,
+                    p1.y,
+                    p2.x,
+                    p2.y,
+                    i % 4 == 0 ? 1.2f : 0.8f);
+            }
+        }
 
         juce::Path baseArc;
         baseArc.addCentredArc (
@@ -125,10 +311,14 @@ public:
             endAngle,
             true);
 
-        g.setColour (juce::Colour::fromRGB (47, 53, 69));
+        g.setColour (
+            juce::Colour::fromRGB (43, 50, 67));
         g.strokePath (
             baseArc,
-            juce::PathStrokeType (stroke));
+            juce::PathStrokeType (
+                stroke,
+                juce::PathStrokeType::curved,
+                juce::PathStrokeType::rounded));
 
         const float valueAngle =
             startAngle
@@ -147,17 +337,30 @@ public:
 
         auto gradientArea =
             bounds.withSizeKeepingCentre (
-                radius * 2.1f,
-                radius * 2.1f);
+                radius * 2.18f,
+                radius * 2.18f);
+
+        g.setColour (
+            accentPurple.withAlpha (
+                primary ? 0.14f : 0.10f));
+        g.strokePath (
+            valueArc,
+            juce::PathStrokeType (
+                stroke + (primary ? 8.0f : 5.0f),
+                juce::PathStrokeType::curved,
+                juce::PathStrokeType::rounded));
 
         g.setGradientFill (
             accentGradient (gradientArea));
         g.strokePath (
             valueArc,
-            juce::PathStrokeType (stroke));
+            juce::PathStrokeType (
+                stroke,
+                juce::PathStrokeType::curved,
+                juce::PathStrokeType::rounded));
 
         const float knobRadius =
-            radius - (primary ? 17.0f : 11.0f);
+            radius - (primary ? 20.0f : 13.0f);
 
         auto knob =
             juce::Rectangle<float> (
@@ -165,22 +368,49 @@ public:
                 knobRadius * 2.0f)
                 .withCentre (centre);
 
+        juce::DropShadow (
+            juce::Colours::black.withAlpha (0.56f),
+            primary ? 12 : 8,
+            { 0, primary ? 5 : 3 })
+            .drawForRectangle (
+                g,
+                knob.toNearestInt());
+
         juce::ColourGradient knobGradient (
-            juce::Colour::fromRGB (34, 40, 55),
-            knob.getTopLeft(),
-            juce::Colour::fromRGB (11, 14, 21),
-            knob.getBottomRight(),
-            false);
+            juce::Colour::fromRGB (31, 38, 55),
+            centre.x - knobRadius * 0.45f,
+            centre.y - knobRadius * 0.48f,
+            juce::Colour::fromRGB (8, 12, 20),
+            centre.x + knobRadius * 0.60f,
+            centre.y + knobRadius * 0.70f,
+            true);
 
         g.setGradientFill (knobGradient);
         g.fillEllipse (knob);
-        g.setColour (border.withAlpha (0.9f));
+
+        g.setColour (
+            juce::Colours::white.withAlpha (0.055f));
+        g.drawEllipse (
+            knob.reduced (1.0f),
+            1.0f);
+
+        g.setColour (
+            border.withAlpha (0.86f));
         g.drawEllipse (knob, 1.0f);
 
         const auto marker =
             centre.getPointOnCircumference (
                 radius,
                 valueAngle);
+
+        g.setColour (
+            juce::Colours::black.withAlpha (0.30f));
+        g.fillEllipse (
+            juce::Rectangle<float> (
+                primary ? 13.0f : 9.0f,
+                primary ? 13.0f : 9.0f)
+                .withCentre (
+                    marker.translated (0.0f, 1.5f)));
 
         g.setColour (textPrimary);
         g.fillEllipse (
@@ -189,16 +419,38 @@ public:
                 primary ? 10.0f : 7.0f)
                 .withCentre (marker));
 
+        juce::String valueText;
+
+        if (primary)
+        {
+            const auto percent =
+                juce::roundToInt (
+                    sliderPos * 100.0f);
+            valueText =
+                juce::String (percent) + "%";
+        }
+        else
+        {
+            const auto percent =
+                juce::roundToInt (
+                    juce::jlimit (
+                        0.0,
+                        1.0,
+                        slider.getValue())
+                    * 100.0);
+            valueText =
+                juce::String (percent) + "%";
+        }
+
         g.setColour (textPrimary);
         g.setFont (
             juce::FontOptions (
-                primary ? 28.0f : 16.0f));
+                primary ? 38.0f : 18.0f));
 
         g.drawFittedText (
-            slider.getTextFromValue (
-                slider.getValue()),
+            valueText,
             knob.toNearestInt().reduced (
-                primary ? 22 : 9),
+                primary ? 23 : 10),
             juce::Justification::centred,
             1);
     }
@@ -226,7 +478,8 @@ public:
         const float left = area.getX() + 5.0f;
         const float right = area.getRight() - 5.0f;
 
-        g.setColour (juce::Colour::fromRGB (48, 55, 70));
+        g.setColour (
+            juce::Colour::fromRGB (42, 50, 66));
         g.fillRoundedRectangle (
             juce::Rectangle<float> (
                 left,
@@ -239,16 +492,24 @@ public:
             juce::Rectangle<float> (
                 left,
                 cy - 2.0f,
-                juce::jmax (0.0f, sliderPos - left),
+                juce::jmax (
+                    0.0f,
+                    sliderPos - left),
                 4.0f);
 
         g.setGradientFill (
             accentGradient (area));
         g.fillRoundedRectangle (active, 2.0f);
 
+        g.setColour (
+            accentPurple.withAlpha (0.18f));
+        g.fillEllipse (
+            juce::Rectangle<float> (17.0f, 17.0f)
+                .withCentre ({ sliderPos, cy }));
+
         g.setColour (textPrimary);
         g.fillEllipse (
-            juce::Rectangle<float> (10.0f, 10.0f)
+            juce::Rectangle<float> (9.0f, 9.0f)
                 .withCentre ({ sliderPos, cy }));
     }
 
@@ -260,63 +521,106 @@ public:
         bool isDown) override
     {
         auto area =
-            button.getLocalBounds().toFloat().reduced (0.5f);
+            button.getLocalBounds()
+                .toFloat()
+                .reduced (0.5f);
 
-        const bool primary =
-            button.getName() == "learn";
-        const bool top =
-            button.getName() == "top";
+        const auto name = button.getName();
+        const bool primary = name == "learn";
+        const bool top = name == "top";
         const bool toggled =
             button.getToggleState();
 
         if (primary)
         {
+            juce::DropShadow (
+                accentPurple.withAlpha (
+                    isHighlighted ? 0.24f : 0.14f),
+                isHighlighted ? 15 : 11,
+                { 0, 1 })
+                .drawForRectangle (
+                    g,
+                    area.toNearestInt());
+
+            juce::ColourGradient fill (
+                juce::Colour::fromRGB (28, 28, 47),
+                area.getTopLeft(),
+                juce::Colour::fromRGB (13, 19, 34),
+                area.getBottomRight(),
+                false);
+
+            g.setGradientFill (fill);
+            g.fillRoundedRectangle (
+                area,
+                14.0f);
+
+            g.setColour (
+                accentPurple.withAlpha (0.20f));
+            g.fillRoundedRectangle (
+                area.reduced (1.0f),
+                13.0f);
+
             g.setGradientFill (
                 accentGradient (area));
-            g.fillRoundedRectangle (area, 13.0f);
+            juce::Path borderPath;
+            borderPath.addRoundedRectangle (
+                area.reduced (0.5f),
+                14.0f);
+            g.strokePath (
+                borderPath,
+                juce::PathStrokeType (
+                    isDown ? 2.0f : 1.4f));
 
             if (isHighlighted || isDown)
             {
                 g.setColour (
                     juce::Colours::white.withAlpha (
-                        isDown ? 0.10f : 0.055f));
-                g.fillRoundedRectangle (area, 13.0f);
+                        isDown ? 0.08f : 0.035f));
+                g.fillRoundedRectangle (
+                    area.reduced (2.0f),
+                    12.0f);
             }
 
-            g.setColour (
-                accentPurple.brighter (0.45f)
-                    .withAlpha (0.7f));
-            g.drawRoundedRectangle (
-                area,
-                13.0f,
-                1.0f);
             return;
         }
 
         if (top)
         {
-            g.setColour (
-                isHighlighted
-                ? surfaceSoft.brighter (0.08f)
-                : juce::Colours::transparentBlack);
-            g.fillRoundedRectangle (area, 8.0f);
+            if (isHighlighted)
+            {
+                g.setColour (
+                    surfaceSoft.withAlpha (0.72f));
+                g.fillRoundedRectangle (
+                    area,
+                    8.0f);
+            }
+
             return;
         }
 
-        g.setColour (
-            toggled
-            ? accentPurple.withAlpha (0.22f)
-            : surfaceRaised);
-        g.fillRoundedRectangle (area, 10.0f);
+        g.setGradientFill (
+            panelGradient (area, true));
+        g.fillRoundedRectangle (
+            area,
+            controlRadius);
 
         g.setColour (
             toggled
-            ? accentBlue.withAlpha (0.85f)
+            ? accentPurple.withAlpha (0.12f)
+            : juce::Colours::transparentBlack);
+        g.fillRoundedRectangle (
+            area.reduced (1.0f),
+            controlRadius - 1.0f);
+
+        g.setColour (
+            toggled
+            ? accentBlue.withAlpha (0.82f)
             : border.withAlpha (
-                isHighlighted ? 1.0f : 0.8f));
+                isHighlighted ? 0.95f : 0.70f));
+
         g.drawRoundedRectangle (
             area,
-            10.0f,
+            controlRadius,
             toggled ? 1.4f : 1.0f);
     }
 
@@ -326,25 +630,95 @@ public:
         bool,
         bool) override
     {
-        const bool primary =
-            button.getName() == "learn";
-        const bool top =
-            button.getName() == "top";
+        const auto name = button.getName();
+        const bool primary = name == "learn";
+        const bool top = name == "top";
 
-        g.setColour (
+        const auto colour =
             button.isEnabled()
             ? textPrimary
-            : textSecondary.withAlpha (0.45f));
+            : textSecondary.withAlpha (0.45f);
 
+        if (primary)
+        {
+            auto area =
+                button.getLocalBounds()
+                    .toFloat()
+                    .reduced (10.0f);
+
+            drawWaveformIcon (
+                g,
+                area.removeFromTop (42.0f),
+                accentPurple.brighter (0.34f));
+
+            g.setColour (textPrimary);
+            g.setFont (juce::FontOptions (16.0f));
+            g.drawFittedText (
+                button.getButtonText(),
+                area.toNearestInt().reduced (2, 2),
+                juce::Justification::centred,
+                2);
+            return;
+        }
+
+        if (name == "monitor")
+        {
+            auto area =
+                button.getLocalBounds()
+                    .toFloat()
+                    .reduced (8.0f);
+
+            drawHeadphoneIcon (
+                g,
+                area.removeFromTop (31.0f),
+                button.getToggleState()
+                    ? accentCyan
+                    : textPrimary);
+
+            g.setColour (colour);
+            g.setFont (juce::FontOptions (11.2f));
+            g.drawFittedText (
+                button.getButtonText(),
+                area.toNearestInt(),
+                juce::Justification::centred,
+                1);
+            return;
+        }
+
+        if (name == "bypassAction")
+        {
+            auto area =
+                button.getLocalBounds()
+                    .toFloat()
+                    .reduced (8.0f);
+
+            drawBypassIcon (
+                g,
+                area.removeFromTop (29.0f),
+                button.getToggleState()
+                    ? warning
+                    : textPrimary);
+
+            g.setColour (colour);
+            g.setFont (juce::FontOptions (11.2f));
+            g.drawFittedText (
+                button.getButtonText(),
+                area.toNearestInt(),
+                juce::Justification::centred,
+                1);
+            return;
+        }
+
+        g.setColour (colour);
         g.setFont (
             juce::FontOptions (
-                primary ? 17.0f : (top ? 10.5f : 12.5f)));
+                top ? 10.2f : 11.4f));
 
         g.drawFittedText (
             button.getButtonText(),
             button.getLocalBounds().reduced (7, 4),
             juce::Justification::centred,
-            primary ? 2 : 1);
+            1);
     }
 
     void drawComboBox (
@@ -365,17 +739,40 @@ public:
                 static_cast<float> (width) - 1.0f,
                 static_cast<float> (height) - 1.0f);
 
-        g.setColour (surfaceRaised);
-        g.fillRoundedRectangle (area, 8.0f);
-        g.setColour (border);
-        g.drawRoundedRectangle (area, 8.0f, 1.0f);
+        g.setGradientFill (
+            panelGradient (area, true));
+        g.fillRoundedRectangle (
+            area,
+            9.0f);
+
+        g.setColour (
+            juce::Colours::white.withAlpha (0.035f));
+        g.drawRoundedRectangle (
+            area.reduced (1.0f),
+            8.0f,
+            1.0f);
+
+        g.setColour (border.withAlpha (0.82f));
+        g.drawRoundedRectangle (
+            area,
+            9.0f,
+            1.0f);
 
         juce::Path arrow;
-        const float cx = width - 14.0f;
-        const float cy = height * 0.5f;
-        arrow.startNewSubPath (cx - 4.0f, cy - 2.0f);
-        arrow.lineTo (cx, cy + 2.0f);
-        arrow.lineTo (cx + 4.0f, cy - 2.0f);
+        const float cx =
+            static_cast<float> (width) - 15.0f;
+        const float cy =
+            static_cast<float> (height) * 0.5f;
+
+        arrow.startNewSubPath (
+            cx - 4.0f,
+            cy - 2.0f);
+        arrow.lineTo (
+            cx,
+            cy + 2.0f);
+        arrow.lineTo (
+            cx + 4.0f,
+            cy - 2.0f);
 
         g.setColour (textSecondary);
         g.strokePath (
@@ -388,17 +785,21 @@ public:
         juce::Label& label) override
     {
         label.setBounds (
-            10,
+            12,
             0,
-            box.getWidth() - 30,
+            box.getWidth() - 32,
             box.getHeight());
-        label.setFont (juce::FontOptions (11.5f));
+
+        label.setFont (
+            juce::FontOptions (11.0f));
+
         label.setColour (
             juce::Label::textColourId,
             textPrimary);
     }
 };
-}
+} // namespace ui
+} // namespace
 
 SmartDenoiseAudioProcessorEditor::
 SmartDenoiseAudioProcessorEditor (
@@ -406,7 +807,7 @@ SmartDenoiseAudioProcessorEditor (
     : juce::AudioProcessorEditor (&p),
       processor (p),
       conceptLookAndFeel (
-          std::make_unique<ConceptCLookAndFeel>())
+          std::make_unique<ui::ConceptCLookAndFeel>())
 {
     setOpaque (true);
     setLookAndFeel (conceptLookAndFeel.get());
@@ -415,30 +816,33 @@ SmartDenoiseAudioProcessorEditor (
     title.setText (
         "Smart Denoise",
         juce::dontSendNotification);
-    title.setFont (juce::FontOptions (20.0f));
+    title.setFont (
+        juce::FontOptions (21.0f));
     title.setColour (
         juce::Label::textColourId,
-        textPrimary);
+        ui::textPrimary);
     title.setJustificationType (
         juce::Justification::centredLeft);
 
     profileName.setText (
         "Studio Noise",
         juce::dontSendNotification);
-    profileName.setFont (juce::FontOptions (11.5f));
+    profileName.setFont (
+        juce::FontOptions (11.2f));
     profileName.setColour (
         juce::Label::textColourId,
-        textPrimary);
+        ui::textPrimary);
     profileName.setJustificationType (
         juce::Justification::centredLeft);
 
     profileStatus.setText (
         "No profile - learn room noise",
         juce::dontSendNotification);
-    profileStatus.setFont (juce::FontOptions (10.5f));
+    profileStatus.setFont (
+        juce::FontOptions (10.2f));
     profileStatus.setColour (
         juce::Label::textColourId,
-        textSecondary);
+        ui::textSecondary);
     profileStatus.setJustificationType (
         juce::Justification::centredLeft);
 
@@ -495,13 +899,13 @@ SmartDenoiseAudioProcessorEditor (
     profileOffset.setTextValueSuffix (" dB");
     profileOffset.setColour (
         juce::Slider::textBoxTextColourId,
-        textPrimary);
+        ui::textPrimary);
     profileOffset.setColour (
         juce::Slider::textBoxBackgroundColourId,
-        surfaceRaised);
+        ui::surfaceRaised);
     profileOffset.setColour (
         juce::Slider::textBoxOutlineColourId,
-        border);
+        ui::border);
 
     reductionLabel.setText (
         "Reduce Noise",
@@ -516,16 +920,24 @@ SmartDenoiseAudioProcessorEditor (
         "Profile Offset",
         juce::dontSendNotification);
 
+    reductionLabel.setFont (
+        juce::FontOptions (13.5f));
+    preserveLabel.setFont (
+        juce::FontOptions (11.8f));
+    silenceLabel.setFont (
+        juce::FontOptions (11.8f));
+    profileOffsetLabel.setFont (
+        juce::FontOptions (11.0f));
+
     for (auto* label : {
              &reductionLabel,
              &preserveLabel,
              &silenceLabel,
              &profileOffsetLabel })
     {
-        label->setFont (juce::FontOptions (11.5f));
         label->setColour (
             juce::Label::textColourId,
-            textPrimary);
+            ui::textPrimary);
         label->setJustificationType (
             juce::Justification::centred);
     }
@@ -535,10 +947,16 @@ SmartDenoiseAudioProcessorEditor (
     redoButton.setName ("top");
     helpButton.setName ("top");
     learn.setName ("learn");
+    hearRemoved.setName ("monitor");
+    bypass.setName ("bypassAction");
+    advanced.setName ("advancedAction");
 
-    abButton.setInterceptsMouseClicks (false, false);
-    undoButton.setInterceptsMouseClicks (false, false);
-    redoButton.setInterceptsMouseClicks (false, false);
+    abButton.setInterceptsMouseClicks (
+        false, false);
+    undoButton.setInterceptsMouseClicks (
+        false, false);
+    redoButton.setInterceptsMouseClicks (
+        false, false);
 
     hearRemoved.setClickingTogglesState (true);
     bypass.setClickingTogglesState (true);
@@ -546,19 +964,21 @@ SmartDenoiseAudioProcessorEditor (
     learnPopupTitle.setText (
         "Learn Noise",
         juce::dontSendNotification);
-    learnPopupTitle.setFont (juce::FontOptions (16.0f));
+    learnPopupTitle.setFont (
+        juce::FontOptions (17.0f));
     learnPopupTitle.setColour (
         juce::Label::textColourId,
-        textPrimary);
+        ui::textPrimary);
 
     learnPopupInstruction.setText (
-        "Keep only room / system noise playing.\nSmart Denoise captures a frozen 3-second profile.",
+        "Find a section containing only room or system noise.\n"
+        "Smart Denoise captures a frozen 3-second profile.",
         juce::dontSendNotification);
     learnPopupInstruction.setFont (
         juce::FontOptions (10.5f));
     learnPopupInstruction.setColour (
         juce::Label::textColourId,
-        textSecondary);
+        ui::textSecondary);
     learnPopupInstruction.setJustificationType (
         juce::Justification::topLeft);
 
@@ -566,7 +986,7 @@ SmartDenoiseAudioProcessorEditor (
         juce::FontOptions (11.0f));
     learnPopupStatus.setColour (
         juce::Label::textColourId,
-        accentCyan);
+        ui::accentCyan);
     learnPopupStatus.setJustificationType (
         juce::Justification::centredLeft);
 
@@ -574,52 +994,50 @@ SmartDenoiseAudioProcessorEditor (
         "Advanced",
         juce::dontSendNotification);
     advancedTitle.setFont (
-        juce::FontOptions (15.0f));
+        juce::FontOptions (16.0f));
     advancedTitle.setColour (
         juce::Label::textColourId,
-        textPrimary);
+        ui::textPrimary);
 
     advancedStatus.setFont (
         juce::FontOptions (10.5f));
     advancedStatus.setColour (
         juce::Label::textColourId,
-        textSecondary);
+        ui::textSecondary);
     advancedStatus.setJustificationType (
         juce::Justification::centredLeft);
 
-    addAndMakeVisible (title);
-    addAndMakeVisible (profileStatus);
-    addAndMakeVisible (profileName);
-
-    addAndMakeVisible (abButton);
-    addAndMakeVisible (undoButton);
-    addAndMakeVisible (redoButton);
-    addAndMakeVisible (helpButton);
-
-    addAndMakeVisible (learn);
-    addAndMakeVisible (hearRemoved);
-    addAndMakeVisible (bypass);
-    addAndMakeVisible (advanced);
-    addAndMakeVisible (quality);
-
-    addAndMakeVisible (reduction);
-    addAndMakeVisible (preserve);
-    addAndMakeVisible (silence);
-    addAndMakeVisible (profileOffset);
-
-    addAndMakeVisible (reductionLabel);
-    addAndMakeVisible (preserveLabel);
-    addAndMakeVisible (silenceLabel);
-    addAndMakeVisible (profileOffsetLabel);
-
-    addAndMakeVisible (learnPopupTitle);
-    addAndMakeVisible (learnPopupInstruction);
-    addAndMakeVisible (learnPopupStatus);
-    addAndMakeVisible (learnPopupClose);
-
-    addAndMakeVisible (advancedTitle);
-    addAndMakeVisible (advancedStatus);
-    addAndMakeVisible (advancedClose);
+    for (auto* component : {
+             static_cast<juce::Component*> (&title),
+             &profileStatus,
+             &profileName,
+             &abButton,
+             &undoButton,
+             &redoButton,
+             &helpButton,
+             &learn,
+             &hearRemoved,
+             &bypass,
+             &advanced,
+             &quality,
+             &reduction,
+             &preserve,
+             &silence,
+             &profileOffset,
+             &reductionLabel,
+             &preserveLabel,
+             &silenceLabel,
+             &profileOffsetLabel,
+             &learnPopupTitle,
+             &learnPopupInstruction,
+             &learnPopupStatus,
+             &learnPopupClose,
+             &advancedTitle,
+             &advancedStatus,
+             &advancedClose })
+    {
+        addAndMakeVisible (component);
+    }
 
     auto& state = processor.getParameters();
 
@@ -709,13 +1127,15 @@ void SmartDenoiseAudioProcessorEditor::configureRotary (
 {
     slider.setSliderStyle (
         juce::Slider::RotaryHorizontalVerticalDrag);
+
     slider.setTextBoxStyle (
         juce::Slider::NoTextBox,
         false,
         0,
         0);
+
     slider.setMouseDragSensitivity (
-        primary ? 240 : 180);
+        primary ? 280 : 190);
 }
 
 void SmartDenoiseAudioProcessorEditor::showLearnPopup (
@@ -787,8 +1207,8 @@ void SmartDenoiseAudioProcessorEditor::setBypassed (
 void SmartDenoiseAudioProcessorEditor::syncBypassButton()
 {
     if (const auto* enabledValue =
-            processor.getParameters().getRawParameterValue (
-                "enabled"))
+            processor.getParameters()
+                .getRawParameterValue ("enabled"))
     {
         bypass.setToggleState (
             enabledValue->load() < 0.5f,
@@ -800,23 +1220,32 @@ void SmartDenoiseAudioProcessorEditor::paint (
     juce::Graphics& g)
 {
     juce::ColourGradient background (
-        backgroundTop,
+        ui::backgroundTop,
         0.0f,
         0.0f,
-        backgroundBottom,
-        0.0f,
+        ui::backgroundBottom,
+        static_cast<float> (getWidth()),
         static_cast<float> (getHeight()),
         false);
 
     g.setGradientFill (background);
     g.fillAll();
 
-    g.setColour (border.withAlpha (0.8f));
+    g.setColour (
+        ui::accentBlue.withAlpha (0.025f));
+    g.fillEllipse (
+        static_cast<float> (getWidth()) * 0.45f,
+        -170.0f,
+        650.0f,
+        420.0f);
+
+    g.setColour (
+        ui::border.withAlpha (0.78f));
     g.drawRoundedRectangle (
         getLocalBounds()
             .toFloat()
             .reduced (0.5f),
-        12.0f,
+        13.0f,
         1.0f);
 
     drawHeader (g);
@@ -837,26 +1266,20 @@ void SmartDenoiseAudioProcessorEditor::drawHeader (
     juce::Graphics& g)
 {
     auto header =
-        juce::Rectangle<int> (
-            14, 10, getWidth() - 28, 46);
+        juce::Rectangle<float> (
+            14.0f,
+            10.0f,
+            static_cast<float> (getWidth() - 28),
+            56.0f);
 
-    g.setColour (surface.withAlpha (0.96f));
-    g.fillRoundedRectangle (
-        header.toFloat(),
-        10.0f);
-
-    g.setColour (border.withAlpha (0.75f));
-    g.drawRoundedRectangle (
-        header.toFloat(),
-        10.0f,
-        1.0f);
+    ui::drawPanel (g, header, true);
 
     auto logoArea =
         juce::Rectangle<float> (
             27.0f,
-            22.0f,
-            24.0f,
-            22.0f);
+            23.0f,
+            28.0f,
+            26.0f);
 
     juce::Path waveform;
     waveform.startNewSubPath (
@@ -866,51 +1289,59 @@ void SmartDenoiseAudioProcessorEditor::drawHeader (
         logoArea.getX() + 4.0f,
         logoArea.getCentreY());
     waveform.lineTo (
-        logoArea.getX() + 7.0f,
-        logoArea.getY() + 3.0f);
+        logoArea.getX() + 8.0f,
+        logoArea.getY() + 2.0f);
     waveform.lineTo (
-        logoArea.getX() + 11.0f,
-        logoArea.getBottom() - 3.0f);
+        logoArea.getX() + 12.0f,
+        logoArea.getBottom() - 2.0f);
     waveform.lineTo (
-        logoArea.getX() + 15.0f,
+        logoArea.getX() + 17.0f,
         logoArea.getY() + 6.0f);
     waveform.lineTo (
-        logoArea.getX() + 18.0f,
+        logoArea.getX() + 21.0f,
         logoArea.getCentreY());
     waveform.lineTo (
         logoArea.getRight(),
         logoArea.getCentreY());
 
+    g.setColour (
+        ui::accentPurple.withAlpha (0.16f));
+    g.strokePath (
+        waveform,
+        juce::PathStrokeType (6.0f));
+
     g.setGradientFill (
-        accentGradient (logoArea));
+        ui::accentGradient (logoArea));
     g.strokePath (
         waveform,
         juce::PathStrokeType (2.2f));
 
-    g.setColour (border.withAlpha (0.8f));
+    g.setColour (
+        ui::borderSoft.withAlpha (0.90f));
     g.drawLine (
-        14.0f,
-        56.0f,
-        static_cast<float> (getWidth() - 14),
-        56.0f,
+        315.0f,
+        22.0f,
+        315.0f,
+        54.0f,
+        1.0f);
+
+    g.drawLine (
+        695.0f,
+        22.0f,
+        695.0f,
+        54.0f,
         1.0f);
 }
 
 void SmartDenoiseAudioProcessorEditor::drawCaptureSection (
     juce::Graphics& g)
 {
-    g.setColour (surface.withAlpha (0.88f));
-    g.fillRoundedRectangle (
+    ui::drawPanel (
+        g,
         captureBounds.toFloat(),
-        10.0f);
+        false);
 
-    g.setColour (border.withAlpha (0.7f));
-    g.drawRoundedRectangle (
-        captureBounds.toFloat(),
-        10.0f,
-        1.0f);
-
-    drawStepHeader (
+    ui::drawStepHeader (
         g,
         juce::Rectangle<int> (
             captureBounds.getX() + 14,
@@ -923,37 +1354,71 @@ void SmartDenoiseAudioProcessorEditor::drawCaptureSection (
     if (learnPopupVisible)
         return;
 
+    auto halo =
+        learn.getBounds()
+            .toFloat()
+            .expanded (4.0f);
+
+    g.setColour (
+        ui::accentPurple.withAlpha (0.045f));
+    g.fillRoundedRectangle (
+        halo,
+        17.0f);
+
     auto profilePill =
         juce::Rectangle<float> (
             static_cast<float> (
                 captureBounds.getX() + 18),
             static_cast<float> (
-                captureBounds.getY() + 190),
+                captureBounds.getY() + 199),
             static_cast<float> (
                 captureBounds.getWidth() - 36),
             30.0f);
 
-    g.setColour (surfaceRaised);
-    g.fillRoundedRectangle (profilePill, 15.0f);
-    g.setColour (border);
+    g.setGradientFill (
+        ui::panelGradient (
+            profilePill,
+            true));
+    g.fillRoundedRectangle (
+        profilePill,
+        15.0f);
+
+    g.setColour (
+        ui::border.withAlpha (0.72f));
     g.drawRoundedRectangle (
         profilePill,
         15.0f,
         1.0f);
 
-    g.setColour (accentPurple);
+    g.setColour (ui::accentPurple);
     g.fillEllipse (
         profilePill.getX() + 10.0f,
         profilePill.getCentreY() - 4.0f,
         8.0f,
         8.0f);
 
-    g.setColour (textSecondary);
+    juce::Path caret;
+    caret.startNewSubPath (
+        profilePill.getRight() - 17.0f,
+        profilePill.getCentreY() - 2.0f);
+    caret.lineTo (
+        profilePill.getRight() - 13.0f,
+        profilePill.getCentreY() + 2.0f);
+    caret.lineTo (
+        profilePill.getRight() - 9.0f,
+        profilePill.getCentreY() - 2.0f);
+
+    g.setColour (ui::textSecondary);
+    g.strokePath (
+        caret,
+        juce::PathStrokeType (1.2f));
+
+    g.setColour (ui::textSecondary);
     g.setFont (juce::FontOptions (10.0f));
     g.drawText (
         "Profile Health",
         captureBounds.getX() + 18,
-        captureBounds.getY() + 228,
+        captureBounds.getY() + 239,
         captureBounds.getWidth() - 36,
         18,
         juce::Justification::centredLeft);
@@ -963,20 +1428,24 @@ void SmartDenoiseAudioProcessorEditor::drawCaptureSection (
             static_cast<float> (
                 captureBounds.getX() + 18),
             static_cast<float> (
-                captureBounds.getY() + 254),
+                captureBounds.getY() + 264),
             static_cast<float> (
-                captureBounds.getWidth() - 78),
-            5.0f);
+                captureBounds.getWidth() - 72),
+            6.0f);
 
-    g.setColour (juce::Colour::fromRGB (45, 51, 65));
-    g.fillRoundedRectangle (health, 2.5f);
+    g.setColour (
+        juce::Colour::fromRGB (41, 48, 64));
+    g.fillRoundedRectangle (
+        health,
+        3.0f);
 
     const float qualityValue =
         processor.getEngine().hasProfile()
         ? juce::jlimit (
               0.0f,
               1.0f,
-              processor.getEngine().getProfileQuality())
+              processor.getEngine()
+                  .getProfileQuality())
         : 0.0f;
 
     auto qualityFill = health;
@@ -984,27 +1453,30 @@ void SmartDenoiseAudioProcessorEditor::drawCaptureSection (
         health.getWidth() * qualityValue);
 
     g.setGradientFill (
-        accentGradient (health));
+        ui::accentGradient (health));
     g.fillRoundedRectangle (
         qualityFill,
-        2.5f);
+        3.0f);
 
     g.setColour (
         processor.getEngine().hasProfile()
-        ? accentCyan
-        : textSecondary);
-    g.setFont (juce::FontOptions (10.0f));
+        ? ui::accentCyan
+        : ui::textMuted);
+    g.setFont (
+        juce::FontOptions (10.0f));
+
     g.drawText (
         processor.getEngine().hasProfile()
-        ? juce::String (
-              juce::roundToInt (
-                  qualityValue * 100.0f))
-              + "%"
+        ? (qualityValue > 0.72f
+               ? "Good"
+               : (qualityValue > 0.45f
+                      ? "Fair"
+                      : "Low"))
         : "--",
-        captureBounds.getRight() - 55,
-        captureBounds.getY() + 246,
-        38,
-        20,
+        captureBounds.getRight() - 58,
+        captureBounds.getY() + 254,
+        42,
+        22,
         juce::Justification::centredRight);
 
     if (processor.getEngine().hasProfile())
@@ -1014,21 +1486,25 @@ void SmartDenoiseAudioProcessorEditor::drawCaptureSection (
                 static_cast<float> (
                     captureBounds.getX() + 18),
                 static_cast<float> (
-                    captureBounds.getBottom() - 50),
+                    captureBounds.getBottom() - 49),
                 static_cast<float> (
                     captureBounds.getWidth() - 36),
                 28.0f);
 
         g.setColour (
-            accentBlue.withAlpha (0.09f));
-        g.fillRoundedRectangle (frozen, 8.0f);
+            ui::accentBlue.withAlpha (0.07f));
+        g.fillRoundedRectangle (
+            frozen,
+            8.0f);
+
         g.setColour (
-            accentBlue.withAlpha (0.42f));
+            ui::accentBlue.withAlpha (0.40f));
         g.drawRoundedRectangle (
             frozen,
             8.0f,
             1.0f);
-        g.setColour (accentCyan);
+
+        g.setColour (ui::accentCyan);
         g.setFont (juce::FontOptions (10.0f));
         g.drawText (
             "FROZEN PROFILE",
@@ -1040,18 +1516,12 @@ void SmartDenoiseAudioProcessorEditor::drawCaptureSection (
 void SmartDenoiseAudioProcessorEditor::drawCleanSection (
     juce::Graphics& g)
 {
-    g.setColour (surfaceRaised.withAlpha (0.72f));
-    g.fillRoundedRectangle (
+    ui::drawPanel (
+        g,
         cleanBounds.toFloat(),
-        10.0f);
+        true);
 
-    g.setColour (border.withAlpha (0.62f));
-    g.drawRoundedRectangle (
-        cleanBounds.toFloat(),
-        10.0f,
-        1.0f);
-
-    drawStepHeader (
+    ui::drawStepHeader (
         g,
         juce::Rectangle<int> (
             cleanBounds.getX() + 14,
@@ -1079,58 +1549,64 @@ void SmartDenoiseAudioProcessorEditor::drawCleanSection (
     else if (normalizedReduction > 0.30f)
         character = "Moderate";
 
-    g.setColour (textSecondary);
+    auto macroGlow =
+        reduction.getBounds()
+            .toFloat()
+            .reduced (42.0f);
+
+    g.setColour (
+        ui::accentPurple.withAlpha (0.025f));
+    g.fillEllipse (macroGlow);
+
+    g.setColour (ui::textSecondary);
     g.setFont (juce::FontOptions (10.5f));
     g.drawText (
         character,
         reduction.getX(),
-        reduction.getBottom() - 28,
+        reduction.getBottom() - 22,
         reduction.getWidth(),
         18,
         juce::Justification::centred);
 
-    g.setColour (border.withAlpha (0.55f));
+    g.setColour (
+        ui::borderSoft.withAlpha (0.90f));
     g.drawVerticalLine (
-        preserve.getX() - 14,
+        preserve.getX() - 15,
         static_cast<float> (
             cleanBounds.getY() + 58),
         static_cast<float> (
-            cleanBounds.getBottom() - 22));
+            cleanBounds.getBottom() - 24));
 
-    g.setColour (textSecondary.withAlpha (0.82f));
-    g.setFont (juce::FontOptions (9.5f));
+    g.setColour (
+        ui::textMuted.withAlpha (0.92f));
+    g.setFont (juce::FontOptions (9.0f));
+
     g.drawText (
-        "Protect presence and consonants",
-        preserve.getX() - 8,
-        preserve.getBottom() - 4,
-        preserve.getWidth() + 16,
-        15,
+        "Protect presence + consonants",
+        preserve.getX() - 15,
+        preserve.getBottom() - 1,
+        preserve.getWidth() + 30,
+        16,
         juce::Justification::centred);
 
     g.drawText (
         "Quiet-region clean-up",
-        silence.getX() - 8,
-        silence.getBottom() - 4,
-        silence.getWidth() + 16,
-        15,
+        silence.getX() - 15,
+        silence.getBottom() - 1,
+        silence.getWidth() + 30,
+        16,
         juce::Justification::centred);
 }
 
 void SmartDenoiseAudioProcessorEditor::drawCheckSection (
     juce::Graphics& g)
 {
-    g.setColour (surface.withAlpha (0.90f));
-    g.fillRoundedRectangle (
+    ui::drawPanel (
+        g,
         checkBounds.toFloat(),
-        10.0f);
+        false);
 
-    g.setColour (border.withAlpha (0.70f));
-    g.drawRoundedRectangle (
-        checkBounds.toFloat(),
-        10.0f,
-        1.0f);
-
-    drawStepHeader (
+    ui::drawStepHeader (
         g,
         juce::Rectangle<int> (
             checkBounds.getX() + 14,
@@ -1149,9 +1625,9 @@ void SmartDenoiseAudioProcessorEditor::drawCheckSection (
             static_cast<float> (
                 checkBounds.getRight() - 60),
             static_cast<float> (
-                checkBounds.getY() + 83),
-            13.0f,
-            168.0f),
+                checkBounds.getY() + 82),
+            14.0f,
+            174.0f),
         displayedInputDb,
         "IN");
 
@@ -1159,99 +1635,136 @@ void SmartDenoiseAudioProcessorEditor::drawCheckSection (
         g,
         juce::Rectangle<float> (
             static_cast<float> (
-                checkBounds.getRight() - 34),
+                checkBounds.getRight() - 33),
             static_cast<float> (
-                checkBounds.getY() + 83),
-            13.0f,
-            168.0f),
+                checkBounds.getY() + 82),
+            14.0f,
+            174.0f),
         displayedOutputDb,
         "OUT");
 
     const auto analysis =
         processor.getEngine().getFrameAnalysis();
 
-    g.setColour (border.withAlpha (0.55f));
+    g.setColour (
+        ui::borderSoft.withAlpha (0.88f));
     g.drawHorizontalLine (
-        checkBounds.getBottom() - 77,
+        checkBounds.getBottom() - 80,
         static_cast<float> (
             checkBounds.getX() + 16),
         static_cast<float> (
             checkBounds.getRight() - 16));
 
-    g.setColour (textSecondary);
-    g.setFont (juce::FontOptions (9.3f));
-    g.drawText (
+    auto drawTelemetry =
+        [&] (int y,
+             const juce::String& label,
+             float value,
+             juce::Colour colour)
+        {
+            const auto x =
+                checkBounds.getX() + 16;
+            const auto w =
+                checkBounds.getWidth() - 32;
+
+            g.setColour (ui::textSecondary);
+            g.setFont (juce::FontOptions (9.2f));
+            g.drawText (
+                label,
+                x,
+                y,
+                108,
+                15,
+                juce::Justification::centredLeft);
+
+            g.setColour (colour);
+            g.drawText (
+                juce::String (
+                    juce::roundToInt (
+                        value * 100.0f))
+                    + "%",
+                x + 112,
+                y,
+                w - 112,
+                15,
+                juce::Justification::centredRight);
+
+            auto bar =
+                juce::Rectangle<float> (
+                    static_cast<float> (x),
+                    static_cast<float> (y + 18),
+                    static_cast<float> (w),
+                    3.0f);
+
+            g.setColour (
+                juce::Colour::fromRGB (38, 46, 61));
+            g.fillRoundedRectangle (
+                bar,
+                1.5f);
+
+            auto fill = bar;
+            fill.setWidth (
+                bar.getWidth()
+                * juce::jlimit (
+                    0.0f,
+                    1.0f,
+                    value));
+
+            g.setColour (colour.withAlpha (0.85f));
+            g.fillRoundedRectangle (
+                fill,
+                1.5f);
+        };
+
+    drawTelemetry (
+        checkBounds.getBottom() - 68,
         "P3 DETAIL GUARD",
-        checkBounds.getX() + 16,
-        checkBounds.getBottom() - 65,
-        112,
-        16,
-        juce::Justification::centredLeft);
+        analysis.detailProtection,
+        ui::accentCyan);
 
-    g.setColour (accentCyan);
-    g.drawText (
-        juce::String (
-            juce::roundToInt (
-                analysis.detailProtection * 100.0f))
-            + "%",
-        checkBounds.getRight() - 58,
-        checkBounds.getBottom() - 65,
-        42,
-        16,
-        juce::Justification::centredRight);
-
-    g.setColour (textSecondary);
-    g.drawText (
+    drawTelemetry (
+        checkBounds.getBottom() - 39,
         "TAIL PROTECT",
-        checkBounds.getX() + 16,
-        checkBounds.getBottom() - 43,
-        100,
-        16,
-        juce::Justification::centredLeft);
-
-    g.setColour (accentPurple.brighter (0.25f));
-    g.drawText (
-        juce::String (
-            juce::roundToInt (
-                analysis.tailProtection * 100.0f))
-            + "%",
-        checkBounds.getRight() - 58,
-        checkBounds.getBottom() - 43,
-        42,
-        16,
-        juce::Justification::centredRight);
+        analysis.tailProtection,
+        ui::accentPurple.brighter (0.22f));
 }
 
 void SmartDenoiseAudioProcessorEditor::drawActivityStrip (
     juce::Graphics& g)
 {
-    g.setColour (surface.withAlpha (0.94f));
-    g.fillRoundedRectangle (
+    ui::drawPanel (
+        g,
         activityBounds.toFloat(),
-        8.0f);
-
-    g.setColour (border.withAlpha (0.65f));
-    g.drawRoundedRectangle (
-        activityBounds.toFloat(),
-        8.0f,
-        1.0f);
+        false);
 
     auto graph =
-        activityBounds.reduced (50, 10).toFloat();
-    graph.removeFromTop (4.0f);
+        activityBounds.reduced (52, 10).toFloat();
 
-    g.setColour (border.withAlpha (0.35f));
+    const float cy = graph.getCentreY();
+
+    g.setColour (
+        ui::borderSoft.withAlpha (0.90f));
     g.drawLine (
         graph.getX(),
-        graph.getCentreY(),
+        cy,
         graph.getRight(),
-        graph.getCentreY(),
+        cy,
+        1.0f);
+
+    g.setColour (
+        ui::borderSoft.withAlpha (0.65f));
+    g.drawLine (
+        graph.getCentreX(),
+        graph.getY(),
+        graph.getCentreX(),
+        graph.getBottom(),
         1.0f);
 
     auto makePath =
-        [&] (const std::array<float, 112>& values)
+        [&] (const std::array<float, 112>& values,
+             float phase)
         {
             juce::Path path;
+
             for (size_t i = 0;
                  i < values.size();
                  ++i)
@@ -1270,49 +1783,78 @@ void SmartDenoiseAudioProcessorEditor::drawActivityStrip (
                         / static_cast<float> (
                             values.size() - 1);
 
+                const float oscillation =
+                    std::sin (
+                        static_cast<float> (i)
+                            * 0.62f
+                        + phase);
+
                 const float y =
-                    graph.getBottom()
-                    - norm * graph.getHeight();
+                    cy
+                    - oscillation
+                        * norm
+                        * graph.getHeight()
+                        * 0.32f;
 
                 if (i == 0)
                     path.startNewSubPath (x, y);
                 else
                     path.lineTo (x, y);
             }
+
             return path;
         };
 
     const auto inputPath =
-        makePath (inputHistory);
+        makePath (
+            inputHistory,
+            0.0f);
+
     const auto outputPath =
-        makePath (outputHistory);
+        makePath (
+            outputHistory,
+            0.85f);
 
     g.setColour (
-        accentPurple.withAlpha (0.74f));
+        ui::accentPurple.withAlpha (0.11f));
     g.strokePath (
         inputPath,
-        juce::PathStrokeType (1.25f));
+        juce::PathStrokeType (5.0f));
 
     g.setColour (
-        accentBlue.brighter (0.15f));
+        ui::accentBlue.withAlpha (0.11f));
+    g.strokePath (
+        outputPath,
+        juce::PathStrokeType (5.0f));
+
+    g.setColour (
+        ui::accentPurple.withAlpha (0.80f));
+    g.strokePath (
+        inputPath,
+        juce::PathStrokeType (1.2f));
+
+    g.setColour (
+        ui::accentBlue.brighter (0.14f));
     g.strokePath (
         outputPath,
         juce::PathStrokeType (1.35f));
 
-    g.setColour (textSecondary);
-    g.setFont (juce::FontOptions (9.5f));
+    g.setColour (ui::textSecondary);
+    g.setFont (juce::FontOptions (9.3f));
+
     g.drawText (
         "Input",
         activityBounds.getX() + 14,
         activityBounds.getCentreY() - 10,
-        35,
+        38,
         20,
         juce::Justification::centredLeft);
+
     g.drawText (
         "Output",
-        activityBounds.getRight() - 47,
+        activityBounds.getRight() - 51,
         activityBounds.getCentreY() - 10,
-        35,
+        39,
         20,
         juce::Justification::centredRight);
 }
@@ -1320,37 +1862,34 @@ void SmartDenoiseAudioProcessorEditor::drawActivityStrip (
 void SmartDenoiseAudioProcessorEditor::drawFooter (
     juce::Graphics& g)
 {
-    g.setColour (surface.withAlpha (0.96f));
-    g.fillRoundedRectangle (
+    ui::drawPanel (
+        g,
         footerBounds.toFloat(),
-        8.0f);
-
-    g.setColour (border.withAlpha (0.65f));
-    g.drawRoundedRectangle (
-        footerBounds.toFloat(),
-        8.0f,
-        1.0f);
+        false);
 
     if (learnPopupVisible)
         return;
 
-    g.setColour (textSecondary);
-    g.setFont (juce::FontOptions (9.5f));
+    g.setColour (ui::textMuted);
+    g.setFont (juce::FontOptions (9.3f));
+
     g.drawText (
-        "Quality",
-        quality.getX() - 52,
+        "QUALITY",
+        quality.getX() - 54,
         quality.getY(),
-        46,
+        48,
         quality.getHeight(),
         juce::Justification::centredRight);
 
-    g.setColour (textSecondary.withAlpha (0.78f));
-    g.setFont (juce::FontOptions (9.2f));
+    g.setColour (
+        ui::textMuted.withAlpha (0.86f));
+    g.setFont (juce::FontOptions (9.0f));
+
     g.drawText (
-        "Smart Denoise  v0.3",
-        footerBounds.getRight() - 135,
+        "Smart Denoise  v0.4",
+        footerBounds.getRight() - 136,
         footerBounds.getY(),
-        120,
+        122,
         footerBounds.getHeight(),
         juce::Justification::centredRight);
 }
@@ -1361,23 +1900,23 @@ void SmartDenoiseAudioProcessorEditor::drawLearnPopup (
     auto dim =
         juce::Rectangle<int> (
             14,
-            57,
+            68,
             getWidth() - 28,
-            472);
+            418);
 
     g.setColour (
-        juce::Colours::black.withAlpha (0.72f));
+        juce::Colours::black.withAlpha (0.76f));
     g.fillRoundedRectangle (
         dim.toFloat(),
-        10.0f);
+        12.0f);
 
-    g.setColour (surfaceRaised);
-    g.fillRoundedRectangle (
+    ui::drawPanel (
+        g,
         learnPopupBounds.toFloat(),
-        14.0f);
+        true);
 
     g.setColour (
-        accentPurple.withAlpha (0.62f));
+        ui::accentPurple.withAlpha (0.55f));
     g.drawRoundedRectangle (
         learnPopupBounds.toFloat(),
         14.0f,
@@ -1395,14 +1934,14 @@ void SmartDenoiseAudioProcessorEditor::drawLearnPopup (
     auto circle =
         juce::Rectangle<float> (
             static_cast<float> (
-                learnPopupBounds.getX() + 27),
+                learnPopupBounds.getX() + 25),
             static_cast<float> (
                 learnPopupBounds.getY() + 82),
-            104.0f,
-            104.0f);
+            118.0f,
+            118.0f);
 
     const auto centre = circle.getCentre();
-    const float radius = 45.0f;
+    const float radius = 50.0f;
     const float start =
         juce::MathConstants<float>::pi * 1.25f;
     const float end =
@@ -1419,10 +1958,14 @@ void SmartDenoiseAudioProcessorEditor::drawLearnPopup (
         end,
         true);
 
-    g.setColour (juce::Colour::fromRGB (47, 53, 69));
+    g.setColour (
+        juce::Colour::fromRGB (43, 50, 67));
     g.strokePath (
         baseArc,
-        juce::PathStrokeType (7.0f));
+        juce::PathStrokeType (
+            8.0f,
+            juce::PathStrokeType::curved,
+            juce::PathStrokeType::rounded));
 
     juce::Path progressArc;
     progressArc.addCentredArc (
@@ -1432,19 +1975,33 @@ void SmartDenoiseAudioProcessorEditor::drawLearnPopup (
         radius,
         0.0f,
         start,
-        start + progress * (end - start),
+        start
+            + progress * (end - start),
         true);
 
-    g.setGradientFill (
-        accentGradient (circle));
+    g.setColour (
+        ui::accentPurple.withAlpha (0.14f));
     g.strokePath (
         progressArc,
-        juce::PathStrokeType (7.0f));
+        juce::PathStrokeType (
+            14.0f,
+            juce::PathStrokeType::curved,
+            juce::PathStrokeType::rounded));
 
-    g.setColour (textPrimary);
-    g.setFont (juce::FontOptions (29.0f));
+    g.setGradientFill (
+        ui::accentGradient (circle));
+    g.strokePath (
+        progressArc,
+        juce::PathStrokeType (
+            8.0f,
+            juce::PathStrokeType::curved,
+            juce::PathStrokeType::rounded));
+
+    g.setColour (ui::textPrimary);
+    g.setFont (juce::FontOptions (31.0f));
 
     juce::String centreText = "3";
+
     if (engine.isLearning())
     {
         centreText =
@@ -1463,29 +2020,71 @@ void SmartDenoiseAudioProcessorEditor::drawLearnPopup (
         circle.toNearestInt(),
         juce::Justification::centred);
 
-    g.setColour (textSecondary);
+    g.setColour (ui::textSecondary);
     g.setFont (juce::FontOptions (9.5f));
     g.drawText (
         engine.isLearning()
         ? "capturing"
         : "seconds",
-        circle.toNearestInt().translated (0, 31),
+        circle.toNearestInt()
+            .translated (0, 34),
         juce::Justification::centred);
+
+    auto mini =
+        juce::Rectangle<float> (
+            static_cast<float> (
+                learnPopupBounds.getX() + 168),
+            static_cast<float> (
+                learnPopupBounds.getY() + 170),
+            176.0f,
+            32.0f);
+
+    juce::Path trace;
+    for (int i = 0; i < 36; ++i)
+    {
+        const float x =
+            mini.getX()
+            + mini.getWidth()
+                * static_cast<float> (i)
+                / 35.0f;
+
+        const float y =
+            mini.getCentreY()
+            + std::sin (
+                static_cast<float> (i)
+                    * 1.37f)
+                * (3.0f
+                   + 4.0f
+                       * std::sin (
+                           static_cast<float> (i)
+                               * 0.31f));
+
+        if (i == 0)
+            trace.startNewSubPath (x, y);
+        else
+            trace.lineTo (x, y);
+    }
+
+    g.setColour (
+        ui::accentPurple.withAlpha (0.22f));
+    g.strokePath (
+        trace,
+        juce::PathStrokeType (4.0f));
+
+    g.setGradientFill (
+        ui::accentGradient (mini));
+    g.strokePath (
+        trace,
+        juce::PathStrokeType (1.1f));
 }
 
 void SmartDenoiseAudioProcessorEditor::drawAdvancedDrawer (
     juce::Graphics& g)
 {
-    g.setColour (surface.withAlpha (0.97f));
-    g.fillRoundedRectangle (
+    ui::drawPanel (
+        g,
         advancedBounds.toFloat(),
-        10.0f);
-
-    g.setColour (border.withAlpha (0.85f));
-    g.drawRoundedRectangle (
-        advancedBounds.toFloat(),
-        10.0f,
-        1.0f);
+        true);
 
     auto tabs =
         juce::Rectangle<int> (
@@ -1494,7 +2093,10 @@ void SmartDenoiseAudioProcessorEditor::drawAdvancedDrawer (
             126,
             advancedBounds.getHeight() - 55);
 
-    g.setColour (surfaceRaised);
+    g.setGradientFill (
+        ui::panelGradient (
+            tabs.toFloat(),
+            false));
     g.fillRoundedRectangle (
         tabs.toFloat(),
         8.0f);
@@ -1518,17 +2120,28 @@ void SmartDenoiseAudioProcessorEditor::drawAdvancedDrawer (
         if (i == 0)
         {
             g.setColour (
-                accentPurple.withAlpha (0.20f));
+                ui::accentPurple.withAlpha (0.18f));
             g.fillRoundedRectangle (
                 row.toFloat(),
                 6.0f);
+
+            g.setColour (
+                ui::accentPurple.withAlpha (0.75f));
+            g.fillRoundedRectangle (
+                static_cast<float> (row.getX()),
+                static_cast<float> (row.getY() + 4),
+                2.0f,
+                static_cast<float> (
+                    row.getHeight() - 8),
+                1.0f);
         }
 
         g.setColour (
             i == 0
-            ? textPrimary
-            : textSecondary);
-        g.setFont (juce::FontOptions (10.5f));
+            ? ui::textPrimary
+            : ui::textSecondary);
+
+        g.setFont (juce::FontOptions (10.4f));
         g.drawText (
             names[static_cast<size_t> (i)],
             row,
@@ -1538,8 +2151,9 @@ void SmartDenoiseAudioProcessorEditor::drawAdvancedDrawer (
     auto content =
         advancedBounds.reduced (160, 42);
 
-    g.setColour (textSecondary);
-    g.setFont (juce::FontOptions (9.8f));
+    g.setColour (ui::textSecondary);
+    g.setFont (juce::FontOptions (9.5f));
+
     g.drawText (
         "MAX REDUCTION",
         content.getX(),
@@ -1548,7 +2162,7 @@ void SmartDenoiseAudioProcessorEditor::drawAdvancedDrawer (
         18,
         juce::Justification::centredLeft);
 
-    g.setColour (textPrimary);
+    g.setColour (ui::textPrimary);
     g.setFont (juce::FontOptions (11.0f));
     g.drawText (
         "24.0 dB",
@@ -1558,8 +2172,8 @@ void SmartDenoiseAudioProcessorEditor::drawAdvancedDrawer (
         18,
         juce::Justification::centredLeft);
 
-    g.setColour (textSecondary);
-    g.setFont (juce::FontOptions (9.8f));
+    g.setColour (ui::textSecondary);
+    g.setFont (juce::FontOptions (9.5f));
     g.drawText (
         "FROZEN PROFILE",
         content.getX() + 350,
@@ -1570,8 +2184,9 @@ void SmartDenoiseAudioProcessorEditor::drawAdvancedDrawer (
 
     g.setColour (
         processor.getEngine().hasProfile()
-        ? accentCyan
-        : textSecondary);
+        ? ui::accentCyan
+        : ui::textSecondary);
+
     g.drawText (
         processor.getEngine().hasProfile()
         ? "LOCKED"
@@ -1594,8 +2209,11 @@ void SmartDenoiseAudioProcessorEditor::drawAdvancedDrawer (
             180.0f,
             5.0f);
 
-    g.setColour (juce::Colour::fromRGB (45, 51, 65));
-    g.fillRoundedRectangle (detailBar, 2.5f);
+    g.setColour (
+        juce::Colour::fromRGB (41, 48, 64));
+    g.fillRoundedRectangle (
+        detailBar,
+        2.5f);
 
     auto detailFill = detailBar;
     detailFill.setWidth (
@@ -1606,18 +2224,18 @@ void SmartDenoiseAudioProcessorEditor::drawAdvancedDrawer (
             analysis.detailProtection));
 
     g.setGradientFill (
-        accentGradient (detailBar));
+        ui::accentGradient (detailBar));
     g.fillRoundedRectangle (
         detailFill,
         2.5f);
 
-    g.setColour (textSecondary);
-    g.setFont (juce::FontOptions (9.5f));
+    g.setColour (ui::textSecondary);
+    g.setFont (juce::FontOptions (9.3f));
     g.drawText (
         "P3 detail / tail protection is automatic and profile-safe.",
         content.getX() + 350,
         content.getY() + 66,
-        300,
+        310,
         20,
         juce::Justification::centredLeft);
 }
@@ -1629,39 +2247,48 @@ void SmartDenoiseAudioProcessorEditor::drawMeter (
     const juce::String& label)
 {
     const float clamped =
-        juce::jlimit (-60.0f, 0.0f, valueDb);
+        juce::jlimit (
+            -60.0f,
+            0.0f,
+            valueDb);
+
     const float norm =
         (clamped + 60.0f) / 60.0f;
 
-    g.setColour (textSecondary);
-    g.setFont (juce::FontOptions (9.5f));
+    g.setColour (ui::textSecondary);
+    g.setFont (juce::FontOptions (9.0f));
+
     g.drawText (
         label,
         juce::Rectangle<int> (
-            static_cast<int> (bounds.getX() - 8.0f),
-            static_cast<int> (bounds.getY() - 25.0f),
+            static_cast<int> (
+                bounds.getX() - 8.0f),
+            static_cast<int> (
+                bounds.getY() - 24.0f),
             30,
-            18),
+            17),
         juce::Justification::centred);
 
-    constexpr int segments = 18;
+    constexpr int segments = 20;
     const float gap = 2.0f;
     const float segmentHeight =
         (bounds.getHeight()
-         - gap * static_cast<float> (segments - 1))
+         - gap
+             * static_cast<float> (
+                 segments - 1))
         / static_cast<float> (segments);
 
     const int lit =
         juce::roundToInt (
-            norm * static_cast<float> (segments));
+            norm
+            * static_cast<float> (segments));
 
     for (int i = 0; i < segments; ++i)
     {
-        const int fromBottom = i;
         const float y =
             bounds.getBottom()
             - segmentHeight
-            - static_cast<float> (fromBottom)
+            - static_cast<float> (i)
                 * (segmentHeight + gap);
 
         auto segment =
@@ -1675,135 +2302,191 @@ void SmartDenoiseAudioProcessorEditor::drawMeter (
         {
             const float position =
                 static_cast<float> (i)
-                / static_cast<float> (segments - 1);
+                / static_cast<float> (
+                    segments - 1);
+
+            auto colour =
+                ui::accentBlue
+                    .interpolatedWith (
+                        ui::accentPurple,
+                        position);
 
             g.setColour (
-                accentBlue.interpolatedWith (
-                    accentPurple,
-                    position));
+                colour.withAlpha (0.18f));
+            g.fillRoundedRectangle (
+                segment.expanded (2.0f, 1.0f),
+                2.0f);
+
+            g.setColour (colour);
         }
         else
         {
             g.setColour (
-                juce::Colour::fromRGB (35, 41, 54));
+                juce::Colour::fromRGB (
+                    31, 38, 51));
         }
 
         g.fillRoundedRectangle (
             segment,
-            1.5f);
+            1.6f);
     }
 
-    g.setColour (textSecondary);
-    g.setFont (juce::FontOptions (8.6f));
+    g.setColour (ui::textMuted);
+    g.setFont (juce::FontOptions (7.6f));
+
+    const std::array<int, 5> ticks {
+        0, -12, -24, -36, -60
+    };
+
+    for (const int db : ticks)
+    {
+        const float p =
+            static_cast<float> (-db) / 60.0f;
+
+        const int ty =
+            static_cast<int> (
+                bounds.getY()
+                + p * bounds.getHeight()
+                - 6.0f);
+
+        if (label == "IN")
+        {
+            g.drawText (
+                juce::String (db),
+                static_cast<int> (
+                    bounds.getX() - 25.0f),
+                ty,
+                19,
+                12,
+                juce::Justification::centredRight);
+        }
+    }
+
+    g.setColour (ui::textSecondary);
+    g.setFont (juce::FontOptions (8.5f));
+
     g.drawText (
         juce::String (valueDb, 1),
         juce::Rectangle<int> (
-            static_cast<int> (bounds.getX() - 14.0f),
-            static_cast<int> (bounds.getBottom() + 5.0f),
-            42,
+            static_cast<int> (
+                bounds.getX() - 14.0f),
+            static_cast<int> (
+                bounds.getBottom() + 5.0f),
+            44,
             16),
         juce::Justification::centred);
 }
 
 void SmartDenoiseAudioProcessorEditor::resized()
 {
-    title.setBounds (58, 15, 230, 36);
+    title.setBounds (
+        62, 18, 232, 34);
 
-    abButton.setBounds (705, 17, 58, 30);
-    undoButton.setBounds (768, 17, 48, 30);
-    redoButton.setBounds (818, 17, 48, 30);
-    helpButton.setBounds (872, 17, 34, 30);
+    abButton.setBounds (
+        705, 22, 55, 28);
+    undoButton.setBounds (
+        764, 22, 48, 28);
+    redoButton.setBounds (
+        814, 22, 48, 28);
+    helpButton.setBounds (
+        869, 22, 36, 28);
 
-    captureBounds = { 14, 65, 220, 338 };
-    cleanBounds = { 242, 65, 468, 338 };
-    checkBounds = { 718, 65, 208, 338 };
-    activityBounds = { 14, 411, 912, 67 };
-    footerBounds = { 14, 486, 912, 42 };
+    captureBounds =
+        { 14, 76, 220, 330 };
+    cleanBounds =
+        { 242, 76, 468, 330 };
+    checkBounds =
+        { 718, 76, 208, 330 };
+
+    activityBounds =
+        { 14, 414, 912, 70 };
+    footerBounds =
+        { 14, 492, 912, 36 };
 
     learn.setBounds (
-        captureBounds.getX() + 30,
-        captureBounds.getY() + 53,
-        captureBounds.getWidth() - 60,
-        126);
+        captureBounds.getX() + 31,
+        captureBounds.getY() + 55,
+        captureBounds.getWidth() - 62,
+        132);
 
     profileName.setBounds (
-        captureBounds.getX() + 43,
-        captureBounds.getY() + 191,
-        captureBounds.getWidth() - 72,
+        captureBounds.getX() + 42,
+        captureBounds.getY() + 200,
+        captureBounds.getWidth() - 78,
         28);
 
     profileStatus.setBounds (
         captureBounds.getX() + 18,
-        captureBounds.getY() + 269,
+        captureBounds.getY() + 277,
         captureBounds.getWidth() - 36,
         34);
 
     reductionLabel.setBounds (
-        cleanBounds.getX() + 40,
-        cleanBounds.getY() + 51,
+        cleanBounds.getX() + 42,
+        cleanBounds.getY() + 48,
         238,
-        23);
+        24);
 
     reduction.setBounds (
-        cleanBounds.getX() + 24,
-        cleanBounds.getY() + 68,
-        270,
-        244);
+        cleanBounds.getX() + 18,
+        cleanBounds.getY() + 67,
+        282,
+        238);
 
     preserveLabel.setBounds (
-        cleanBounds.getX() + 315,
-        cleanBounds.getY() + 57,
-        130,
+        cleanBounds.getX() + 312,
+        cleanBounds.getY() + 53,
+        136,
         20);
 
     preserve.setBounds (
         cleanBounds.getX() + 321,
-        cleanBounds.getY() + 77,
+        cleanBounds.getY() + 74,
         118,
-        116);
+        112);
 
     silenceLabel.setBounds (
-        cleanBounds.getX() + 315,
-        cleanBounds.getY() + 197,
-        130,
+        cleanBounds.getX() + 312,
+        cleanBounds.getY() + 189,
+        136,
         20);
 
     silence.setBounds (
         cleanBounds.getX() + 321,
-        cleanBounds.getY() + 216,
+        cleanBounds.getY() + 210,
         118,
-        112);
+        108);
 
     hearRemoved.setBounds (
-        checkBounds.getX() + 15,
-        checkBounds.getY() + 73,
+        checkBounds.getX() + 14,
+        checkBounds.getY() + 71,
         116,
-        67);
+        72);
 
     bypass.setBounds (
-        checkBounds.getX() + 15,
-        checkBounds.getY() + 151,
+        checkBounds.getX() + 14,
+        checkBounds.getY() + 154,
         116,
-        58);
+        68);
 
     advanced.setBounds (
         footerBounds.getX() + 8,
-        footerBounds.getY() + 7,
-        104,
+        footerBounds.getY() + 4,
+        108,
         28);
 
     quality.setBounds (
         footerBounds.getCentreX() - 70,
-        footerBounds.getY() + 7,
-        185,
+        footerBounds.getY() + 4,
+        188,
         28);
 
     learnPopupBounds =
         juce::Rectangle<int> (
-            getWidth() / 2 - 175,
-            135,
-            350,
-            265);
+            getWidth() / 2 - 190,
+            128,
+            380,
+            282);
 
     learnPopupTitle.setBounds (
         learnPopupBounds.getX() + 18,
@@ -1812,22 +2495,22 @@ void SmartDenoiseAudioProcessorEditor::resized()
         28);
 
     learnPopupInstruction.setBounds (
-        learnPopupBounds.getX() + 150,
-        learnPopupBounds.getY() + 82,
-        178,
+        learnPopupBounds.getX() + 168,
+        learnPopupBounds.getY() + 81,
+        190,
         80);
 
     learnPopupStatus.setBounds (
-        learnPopupBounds.getX() + 150,
-        learnPopupBounds.getY() + 164,
-        178,
-        38);
+        learnPopupBounds.getX() + 168,
+        learnPopupBounds.getY() + 208,
+        190,
+        32);
 
     learnPopupClose.setBounds (
-        learnPopupBounds.getRight() - 102,
-        learnPopupBounds.getBottom() - 46,
-        80,
-        28);
+        learnPopupBounds.getRight() - 105,
+        learnPopupBounds.getBottom() - 42,
+        82,
+        26);
 
     if (advancedDrawerVisible)
     {
@@ -1874,6 +2557,7 @@ void SmartDenoiseAudioProcessorEditor::timerCallback()
 {
     const float currentInput =
         processor.getInputPeakDb();
+
     const float currentOutput =
         processor.getOutputPeakDb();
 
@@ -1895,13 +2579,16 @@ void SmartDenoiseAudioProcessorEditor::timerCallback()
         inputHistory.begin() + 1,
         inputHistory.end(),
         inputHistory.begin());
+
     std::move (
         outputHistory.begin() + 1,
         outputHistory.end(),
         outputHistory.begin());
 
-    inputHistory.back() = displayedInputDb;
-    outputHistory.back() = displayedOutputDb;
+    inputHistory.back() =
+        displayedInputDb;
+    outputHistory.back() =
+        displayedOutputDb;
 
     auto& engine = processor.getEngine();
 
@@ -1973,11 +2660,14 @@ void SmartDenoiseAudioProcessorEditor::timerCallback()
     {
         profileText =
             "No profile - learn room noise";
+
         profileName.setText (
             "Studio Noise",
             juce::dontSendNotification);
+
         learn.setButtonText (
             "Learn Noise\n3s");
+
         learnPopupStatus.setText (
             "Waiting for a valid profile",
             juce::dontSendNotification);
@@ -1994,11 +2684,13 @@ void SmartDenoiseAudioProcessorEditor::timerCallback()
         "Detail Guard "
         + juce::String (
             juce::roundToInt (
-                analysis.detailProtection * 100.0f))
+                analysis.detailProtection
+                * 100.0f))
         + "%   |   Tail Protect "
         + juce::String (
             juce::roundToInt (
-                analysis.tailProtection * 100.0f))
+                analysis.tailProtection
+                * 100.0f))
         + "%   |   Latency "
         + juce::String (
             engine.getLatencySamples())

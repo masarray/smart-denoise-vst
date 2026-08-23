@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Semantic version without v prefix (example: 0.3.0)"
+        description: "Semantic version without v prefix (example: 0.4.0)"
         required: false
         default: ""
 
@@ -59,7 +59,7 @@ jobs:
           "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
           "RELEASE_TAG=v$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Source + mathematical QA
+      - name: Source + mathematical + UX QA
         shell: pwsh
         run: |
           python qa/verify_p0_p2_contract.py
@@ -69,6 +69,10 @@ jobs:
           python qa/verify_p3_source.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python qa/verify_p3_math.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python qa/verify_concept_c_ui.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python qa/verify_p4_visual_fidelity.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Configure
@@ -173,7 +177,9 @@ jobs:
             "Smart-Denoise-Standalone-$env:RELEASE_TAG-Windows-x64.zip",
             "Smart-Denoise-pluginval-$env:RELEASE_TAG.zip"
           )
+
           gh release view "$env:RELEASE_TAG" *> $null
+
           if ($LASTEXITCODE -eq 0) {
             gh release upload "$env:RELEASE_TAG" @files --clobber
           } else {

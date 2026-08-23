@@ -39,6 +39,9 @@ jobs:
       - name: Validate Concept C UI contract
         run: python qa/verify_concept_c_ui.py
 
+      - name: Validate P4 visual fidelity contract
+        run: python qa/verify_p4_visual_fidelity.py
+
   windows-build:
     name: Windows VST3 + Standalone + pluginval
     needs: source-audit
@@ -79,6 +82,65 @@ jobs:
 
           Write-Host "VST3: $($vst.FullName)"
           Write-Host "Standalone: $($standalone.FullName)"
+
+      - name: Capture P4 standalone visual smoke
+        id: ui_capture
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ui-snapshot | Out-Null
+
+          Add-Type @"
+          using System;
+          using System.Runtime.InteropServices;
+          public static class SmartDenoiseWin32 {
+              [StructLayout(LayoutKind.Sequential)]
+              public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
+
+              [DllImport("user32.dll")]
+              public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+          }
+          "@
+
+          Add-Type -AssemblyName System.Drawing
+
+          $process = Start-Process -FilePath "$env:STANDALONE_PATH" -PassThru
+          try {
+            Start-Sleep -Seconds 6
+            $process.Refresh()
+
+            if ($process.MainWindowHandle -eq 0) {
+              throw 'Standalone main window was not available for visual smoke capture'
+            }
+
+            $rect = New-Object SmartDenoiseWin32+RECT
+            if (-not [SmartDenoiseWin32]::GetWindowRect($process.MainWindowHandle, [ref]$rect)) {
+              throw 'GetWindowRect failed'
+            }
+
+            $width = $rect.Right - $rect.Left
+            $height = $rect.Bottom - $rect.Top
+            if ($width -lt 800 -or $height -lt 500) {
+              throw "Unexpected standalone window size ${width}x${height}"
+            }
+
+            $bitmap = New-Object System.Drawing.Bitmap($width, $height)
+            $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+            try {
+              $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)
+              $bitmap.Save(
+                "$PWD/ui-snapshot/Smart-Denoise-P4-runtime.png",
+                [System.Drawing.Imaging.ImageFormat]::Png
+              )
+            } finally {
+              $graphics.Dispose()
+              $bitmap.Dispose()
+            }
+          } finally {
+            if (-not $process.HasExited) {
+              Stop-Process -Id $process.Id -Force
+            }
+          }
 
       - name: Download pluginval 1.0.4
         shell: pwsh
@@ -138,5 +200,6 @@ jobs:
           path: |
             Smart-Denoise-Windows-CI.zip
             pluginval-logs/**
-          if-no-files-found: error
+            ui-snapshot/**
+          if-no-files-found: warn
           retention-days: 14
