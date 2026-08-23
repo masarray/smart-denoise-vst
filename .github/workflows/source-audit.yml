@@ -1,7 +1,10 @@
-name: Smart Denoise source audit
+name: Smart Denoise CI
 
 on:
   push:
+    branches:
+      - main
+      - "agent/**"
   pull_request:
   workflow_dispatch:
 
@@ -10,18 +13,114 @@ permissions:
 
 jobs:
   source-audit:
+    name: Source + math QA
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Validate P0-P2 source contract
         run: python qa/verify_p0_p2_contract.py
 
       - name: Validate P2 mathematical behavior
         run: python qa/verify_p2_math.py
+
+  windows-build:
+    name: Windows VST3 + Standalone + pluginval
+    needs: source-audit
+    runs-on: windows-latest
+    timeout-minutes: 35
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure
+        shell: pwsh
+        run: >
+          cmake -S . -B build -A x64
+          -DSMART_DENOISE_BUILD_TESTS=ON
+          -DSMART_DENOISE_VERSION=0.3.0
+
+      - name: Build Release
+        shell: pwsh
+        run: cmake --build build --config Release --parallel 2
+
+      - name: Engine black-box tests
+        shell: pwsh
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Locate build products
+        shell: pwsh
+        run: |
+          $vst = Get-ChildItem -Path build -Recurse -Directory |
+            Where-Object { $_.Name -eq 'Smart Denoise.vst3' } |
+            Select-Object -First 1
+
+          $standalone = Get-ChildItem -Path build -Recurse -File -Filter 'Smart Denoise.exe' |
+            Where-Object { $_.FullName -match 'Standalone' } |
+            Select-Object -First 1
+
+          if ($null -eq $vst) { throw 'Smart Denoise.vst3 was not produced' }
+          if ($null -eq $standalone) { throw 'Smart Denoise Standalone executable was not produced' }
+
+          "VST_PATH=$($vst.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "STANDALONE_PATH=$($standalone.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          Write-Host "VST3: $($vst.FullName)"
+          Write-Host "Standalone: $($standalone.FullName)"
+
+      - name: Download pluginval 1.0.4
+        shell: pwsh
+        run: |
+          Invoke-WebRequest `
+            -Uri 'https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Windows.zip' `
+            -OutFile pluginval.zip
+
+          Expand-Archive pluginval.zip -DestinationPath pluginval -Force
+
+          $pluginval = Get-ChildItem -Path pluginval -Recurse -File -Filter pluginval.exe |
+            Select-Object -First 1
+
+          if ($null -eq $pluginval) { throw 'pluginval.exe not found in downloaded archive' }
+          "PLUGINVAL_PATH=$($pluginval.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Validate VST3 with pluginval
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force pluginval-logs | Out-Null
+
+          & "$env:PLUGINVAL_PATH" `
+            --validate-in-process `
+            --strictness-level 5 `
+            --skip-gui-tests `
+            --output-dir "$PWD/pluginval-logs" `
+            "$env:VST_PATH"
+
+          if ($LASTEXITCODE -ne 0) { throw "pluginval failed with exit code $LASTEXITCODE" }
+
+      - name: Package CI artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force package | Out-Null
+          Copy-Item -Recurse -Force "$env:VST_PATH" package/
+          Copy-Item -Force "$env:STANDALONE_PATH" package/
+
+          Compress-Archive `
+            -Path package/* `
+            -DestinationPath Smart-Denoise-Windows-CI.zip `
+            -Force
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v6
+        with:
+          name: Smart-Denoise-Windows-CI
+          path: |
+            Smart-Denoise-Windows-CI.zip
+            pluginval-logs/**
+          if-no-files-found: error
+          retention-days: 14
