@@ -41,10 +41,7 @@ jobs:
 
       - name: Configure
         shell: pwsh
-        run: >
-          cmake -S . -B build -A x64
-          -DSMART_DENOISE_BUILD_TESTS=ON
-          -DSMART_DENOISE_VERSION=0.3.0
+        run: cmake -S . -B build -A x64 -DSMART_DENOISE_BUILD_TESTS=ON
 
       - name: Build Release
         shell: pwsh
