@@ -1,0 +1,54 @@
+name: Apply P3 engine patch
+
+on:
+  push:
+    branches:
+      - "agent/**"
+    paths:
+      - "tools/p3/READY"
+
+permissions:
+  contents: write
+
+jobs:
+  apply-p3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Apply exact-match P3 patch
+        run: python tools/p3/apply_p3.py
+
+      - name: Verify diff hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          grep -q "processDetailFrame" Source/DSP/SmartDenoiseEngine.cpp
+          grep -q "gainHistoryOne" Source/DSP/SmartDenoiseEngine.h
+          grep -q "detailProtection" Source/DSP/SmartDenoiseEngine.h
+
+      - name: Remove one-shot patch machinery
+        shell: bash
+        run: |
+          rm -rf tools/p3
+          rm -f .github/workflows/apply-p3.yml
+
+      - name: Commit P3 engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "smart-denoise-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "P3: add multi-resolution detail guard and gain consensus"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
