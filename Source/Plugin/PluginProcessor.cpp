@@ -180,6 +180,9 @@ void SmartDenoiseAudioProcessor::prepareToPlay (
 
     setLatencySamples (
         lastReportedLatency);
+
+    inputPeakDb.store (-72.0f, std::memory_order_relaxed);
+    outputPeakDb.store (-72.0f, std::memory_order_relaxed);
 }
 
 void SmartDenoiseAudioProcessor::processBlock (
@@ -190,6 +193,24 @@ void SmartDenoiseAudioProcessor::processBlock (
 
     const int inputChannels =
         getTotalNumInputChannels();
+
+    const int samples = buffer.getNumSamples();
+
+    float inputPeak = 0.0f;
+    for (int channel = 0;
+         channel < juce::jmin (inputChannels, buffer.getNumChannels());
+         ++channel)
+    {
+        inputPeak = juce::jmax (
+            inputPeak,
+            buffer.getMagnitude (channel, 0, samples));
+    }
+
+    inputPeakDb.store (
+        juce::Decibels::gainToDecibels (
+            inputPeak,
+            -72.0f),
+        std::memory_order_relaxed);
 
     for (int channel = inputChannels;
          channel < buffer.getNumChannels();
@@ -203,6 +224,22 @@ void SmartDenoiseAudioProcessor::processBlock (
 
     applyParametersToEngine();
     engine.process (buffer);
+
+    float outputPeak = 0.0f;
+    for (int channel = 0;
+         channel < juce::jmin (inputChannels, buffer.getNumChannels());
+         ++channel)
+    {
+        outputPeak = juce::jmax (
+            outputPeak,
+            buffer.getMagnitude (channel, 0, samples));
+    }
+
+    outputPeakDb.store (
+        juce::Decibels::gainToDecibels (
+            outputPeak,
+            -72.0f),
+        std::memory_order_relaxed);
 
     const int latency =
         engine.getLatencySamples();
