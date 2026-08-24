@@ -817,6 +817,8 @@ void CleanLookAndFeel::drawRotarySlider (
         }
 
         // P4.6: no translucent sheen patch is painted over the machined face.
+    }
+
     // Very thin face edge, not a 3D bevel.
     g.setColour (juce::Colours::white.withAlpha (0.045f));
     g.drawEllipse (
