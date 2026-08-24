@@ -86,9 +86,8 @@ jobs:
           Write-Host "VST3: $($vst.FullName)"
           Write-Host "Standalone: $($standalone.FullName)"
 
-      - name: Capture P5 standalone visual smoke
+      - name: Capture mandatory P5.1 runtime visual
         id: ui_capture
-        continue-on-error: true
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force ui-snapshot | Out-Null
@@ -97,8 +96,19 @@ jobs:
           using System;
           using System.Runtime.InteropServices;
           public static class SmartDenoiseWin32 {
+              public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
               [StructLayout(LayoutKind.Sequential)]
               public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
+
+              [DllImport("user32.dll")]
+              public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+              [DllImport("user32.dll")]
+              public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
+              [DllImport("user32.dll")]
+              public static extern bool IsWindowVisible(IntPtr hWnd);
 
               [DllImport("user32.dll")]
               public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
@@ -109,35 +119,80 @@ jobs:
 
           $process = Start-Process -FilePath "$env:STANDALONE_PATH" -PassThru
           try {
-            Start-Sleep -Seconds 6
+            Start-Sleep -Seconds 7
             $process.Refresh()
 
-            if ($process.MainWindowHandle -eq 0) {
-              throw 'Standalone main window was not available for visual smoke capture'
+            if ($process.HasExited) {
+              throw "Standalone exited before visual capture with code $($process.ExitCode)"
             }
 
-            $rect = New-Object SmartDenoiseWin32+RECT
-            if (-not [SmartDenoiseWin32]::GetWindowRect($process.MainWindowHandle, [ref]$rect)) {
-              throw 'GetWindowRect failed'
+            $windows = [System.Collections.Generic.List[object]]::new()
+            $callback = [SmartDenoiseWin32+EnumWindowsProc] {
+              param([IntPtr] $hWnd, [IntPtr] $lParam)
+
+              [uint32] $windowProcessId = 0
+              [SmartDenoiseWin32]::GetWindowThreadProcessId($hWnd, [ref] $windowProcessId) | Out-Null
+
+              if ($windowProcessId -eq [uint32] $process.Id -and [SmartDenoiseWin32]::IsWindowVisible($hWnd)) {
+                $candidateRect = New-Object SmartDenoiseWin32+RECT
+                if ([SmartDenoiseWin32]::GetWindowRect($hWnd, [ref] $candidateRect)) {
+                  $candidateWidth = $candidateRect.Right - $candidateRect.Left
+                  $candidateHeight = $candidateRect.Bottom - $candidateRect.Top
+                  if ($candidateWidth -gt 0 -and $candidateHeight -gt 0) {
+                    $windows.Add([pscustomobject]@{
+                      Handle = $hWnd
+                      Rect = $candidateRect
+                      Width = $candidateWidth
+                      Height = $candidateHeight
+                      Area = $candidateWidth * $candidateHeight
+                    })
+                  }
+                }
+              }
+
+              return $true
             }
 
-            $width = $rect.Right - $rect.Left
-            $height = $rect.Bottom - $rect.Top
-            if ($width -lt 800 -or $height -lt 500) {
-              throw "Unexpected standalone window size ${width}x${height}"
+            [SmartDenoiseWin32]::EnumWindows($callback, [IntPtr]::Zero) | Out-Null
+
+            $target = $windows |
+              Where-Object { $_.Width -ge 800 -and $_.Height -ge 500 } |
+              Sort-Object Area -Descending |
+              Select-Object -First 1
+
+            if ($null -eq $target) {
+              $diagnostic = ($windows | Sort-Object Area -Descending | ForEach-Object { "$($_.Width)x$($_.Height)" }) -join ', '
+              throw "No plugin-sized Standalone window found. Visible process windows: $diagnostic"
             }
 
-            $bitmap = New-Object System.Drawing.Bitmap($width, $height)
+            $pngPath = Join-Path $PWD 'ui-snapshot/Smart-Denoise-P5.1-runtime.png'
+            $bitmap = New-Object System.Drawing.Bitmap($target.Width, $target.Height)
             $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
             try {
-              $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)
-              $bitmap.Save(
-                "$PWD/ui-snapshot/Smart-Denoise-P5-runtime.png",
-                [System.Drawing.Imaging.ImageFormat]::Png
-              )
+              $graphics.CopyFromScreen($target.Rect.Left, $target.Rect.Top, 0, 0, $bitmap.Size)
+              $bitmap.Save($pngPath, [System.Drawing.Imaging.ImageFormat]::Png)
             } finally {
               $graphics.Dispose()
               $bitmap.Dispose()
+            }
+
+            if (-not (Test-Path $pngPath)) {
+              throw 'Runtime screenshot PNG was not created'
+            }
+
+            $pngFile = Get-Item $pngPath
+            if ($pngFile.Length -lt 10000) {
+              throw "Runtime screenshot is unexpectedly small: $($pngFile.Length) bytes"
+            }
+
+            $image = [System.Drawing.Image]::FromFile($pngPath)
+            try {
+              if ($image.Width -lt 800 -or $image.Height -lt 500) {
+                throw "Runtime screenshot dimensions are invalid: $($image.Width)x$($image.Height)"
+              }
+              Write-Host "Runtime visual captured: $($image.Width)x$($image.Height), $($pngFile.Length) bytes"
+            } finally {
+              $image.Dispose()
             }
           } finally {
             if (-not $process.HasExited) {
@@ -196,6 +251,10 @@ jobs:
             -DestinationPath Smart-Denoise-Windows-CI.zip `
             -Force
 
+          if (-not (Test-Path 'ui-snapshot/Smart-Denoise-P5.1-runtime.png')) {
+            throw 'Mandatory P5.1 runtime screenshot missing before artifact upload'
+          }
+
       - name: Upload Windows build
         uses: actions/upload-artifact@v6
         with:
@@ -203,6 +262,6 @@ jobs:
           path: |
             Smart-Denoise-Windows-CI.zip
             pluginval-logs/**
-            ui-snapshot/**
-          if-no-files-found: warn
+            ui-snapshot/Smart-Denoise-P5.1-runtime.png
+          if-no-files-found: error
           retention-days: 14
