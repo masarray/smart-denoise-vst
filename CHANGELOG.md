@@ -14,6 +14,7 @@
 - P4.5 matches the approved knob reference more aggressively: all remaining sphere/gloss cues and glossy marker dots are removed, the flat disc face is enlarged, the cavity/bezel are simplified, the active ring is crisper, and the face uses 144-line radial machining plus a directional satin sheen instead of dome-like specular highlights.
 - P4.6 removes the translucent sheen-band artifact from every knob, moves 3D depth to the perimeter edge only, and makes Learn Noise visibly clickable with a raised circular rim, drop shadow, hover highlight and pressed-depth treatment.
 - P5 removes deceptive A/B/Undo/Redo/Help chrome, removes the false profile dropdown affordance, adds professional tooltips and double-click resets, replaces redundant input/output history with real spectral-reduction activity, and compresses Advanced into one real control plus concise profile diagnostics.
+- P5.1 gives the Advanced drawer collision-safe vertical space and compresses DSP ceiling copy into one line so all real diagnostics remain visible without overlapping.
 - Preserve Detail and Silence Clean-up use the same visual family and display percentages instead of raw 0..1 values.
 - Improved typography hierarchy, disciplined spacing, panel depth, inner highlights and restrained graphite/navy surfaces.
 - Upgraded segmented input/output meters with scale ticks, glow and cleaner readouts.

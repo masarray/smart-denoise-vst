@@ -1330,7 +1330,7 @@ showAdvancedDrawer (
 
     setSize (
         940,
-        shouldShow ? 660 : 540);
+        shouldShow ? 704 : 540);
 
     resized();
     repaint();
@@ -1815,10 +1815,12 @@ drawAdvancedDrawer (
     g.drawText (
         "Fine-tune the learned profile threshold. Double-click resets it.",
         left.removeFromTop (18), juce::Justification::centredLeft);
-    g.drawText ("DSP CEILING", left.removeFromTop (16), juce::Justification::centredLeft);
     g.setColour (ui::textSecondary);
-    g.setFont (juce::FontOptions (10.0f));
-    g.drawText ("24 dB max reduction", left.removeFromTop (18), juce::Justification::centredLeft);
+    g.setFont (juce::FontOptions (9.4f));
+    g.drawText (
+        "DSP ceiling  ·  24 dB max reduction",
+        left.removeFromTop (17),
+        juce::Justification::centredLeft);
 
     g.setColour (ui::textSecondary);
     g.setFont (juce::FontOptions (9.2f));
@@ -2136,7 +2138,7 @@ void SmartDenoiseAudioProcessorEditor::resized()
     if (advancedDrawerVisible)
     {
         advancedBounds =
-            { 15, 538, 910, 106 };
+            { 15, 538, 910, 150 };
 
         advancedTitle.setBounds (
             advancedBounds.getX() + 18,

@@ -29,7 +29,7 @@ check("Input/output meter telemetry", "inputPeakDb" in processor_h and "outputPe
 check("Meter telemetry is atomic", "std::atomic<float> inputPeakDb" in processor_h and "std::atomic<float> outputPeakDb" in processor_h)
 check("Processor measures before and after DSP", "inputPeakDb.store" in processor_cpp and "outputPeakDb.store" in processor_cpp)
 check("P5 denoise activity strip", "drawActivityStrip" in editor_cpp and "reductionHistory" in editor_h and "spectralReductionDb" in editor_cpp)
-check("Advanced drawer expands below compact UI", "shouldShow ? 660 : 540" in editor_cpp and "drawAdvancedDrawer" in editor_cpp)
+check("Advanced drawer expands below compact UI", "shouldShow ? 704 : 540" in editor_cpp and "drawAdvancedDrawer" in editor_cpp)
 check("Advanced exposes real Profile Offset", '"Profile Offset"' in editor_cpp and '"thresholdOffset"' in editor_cpp and "profileOffset" in editor_cpp)
 check("Quality selector uses existing quality parameter", '"quality"' in editor_cpp and "qualityAttachment" in editor_cpp)
 check("No fake adaptive mode", "Adaptive Mode" not in editor_cpp and "adaptive" not in editor_h.lower())
