@@ -2,7 +2,7 @@ name: Apply P4.4 flat machined knob renderer
 
 on:
   pull_request:
-    branches: [agent/ship-v0.3-rc]
+    branches: [main]
     paths:
       - '.github/workflows/apply-p44-flat-knobs.yml'
       - 'tools/apply_p44_flat_knobs.py'
