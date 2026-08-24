@@ -30,12 +30,14 @@ check("Primary macro shows percentage", 'juce::String (percent) + "%"' in editor
 check("Secondary knobs show percentages", "slider.getValue() * 100.0" in editor_cpp)
 check("P4.5 restrained hardware arc illumination", "trackStroke + (primary ? 2.8f : 1.6f)" in editor_cpp)
 check("P4.5 flat directional face shading", "faceGradient" in editor_cpp and "Mostly-flat face" in editor_cpp)
-check("P4.5 reference flat machined face", "constexpr int spokeCount = 144" in editor_cpp and "recessGradient" in editor_cpp and "faceGradient" in editor_cpp and "directionalSheen" in editor_cpp)
+check("P4.6 flat machined face retained", "constexpr int spokeCount = 144" in editor_cpp and "recessGradient" in editor_cpp and "faceGradient" in editor_cpp and "edgeGradient" in editor_cpp)
 check("P4.5 clean recessed hardware well", "const float recessRadius =" in editor_cpp and "fillEllipse (recess)" in editor_cpp)
-check("P4.5 narrow graphite bezel", "auto bezel =" in editor_cpp and "face.expanded" in editor_cpp and "bezelGradient" not in editor_cpp)
+check("P4.6 raised perimeter replaces flat bezel", "edgeOuter" in editor_cpp and "edgeInner" in editor_cpp and "bezelGradient" not in editor_cpp)
 check("P4.5 dominant flat disc face", "const float faceRadius =" in editor_cpp and "fillEllipse (face)" in editor_cpp)
 check("P4.5 fine radial machining", "constexpr int spokeCount = 144" in editor_cpp and "faceClip.addEllipse" in editor_cpp)
-check("P4.5 no sphere gloss or marker dot", "directionalSheen" in editor_cpp and "sheenBand" in editor_cpp and "markerDiameter" not in editor_cpp and "specularGlow" not in editor_cpp and "knobShadow" not in editor_cpp)
+check("P4.6 no translucent knob overlay", "sheenBand" not in editor_cpp and "directionalSheen" not in editor_cpp and "specularGlow" not in editor_cpp)
+check("P4.6 perimeter-only 3D knob edge", "edgeOuter" in editor_cpp and "edgeGradient" in editor_cpp and "knobTopEdge" in editor_cpp and "knobBottomEdge" in editor_cpp)
+check("P4.6 Learn is visibly clickable", "buttonShadow" in editor_cpp and "buttonRim" in editor_cpp and "learnTopEdge" in editor_cpp and "PointingHandCursor" in editor_cpp)
 check("Clean headphone icon", "void drawHeadphones" in editor_cpp and "Icon::headphones" in editor_h)
 check("Clean bypass icon", "void drawBypass" in editor_cpp and "Icon::bypass" in editor_h)
 check("No improvised broken icon fragments", "drawHeadphoneIcon" not in editor_cpp)
@@ -55,7 +57,7 @@ check("Meter telemetry remains atomic", "std::atomic<float> inputPeakDb" in proc
 
 failed = [name for name, ok in checks if not ok]
 
-print("SMART DENOISE P4.5 REFERENCE KNOB MATCH CONTRACT")
+print("SMART DENOISE P4.6 VISUAL MATERIAL FIX CONTRACT")
 print("============================================")
 for name, ok in checks:
     print(f"[{'PASS' if ok else 'FAIL'}] {name}")

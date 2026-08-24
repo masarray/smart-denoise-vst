@@ -207,6 +207,7 @@ LearnCircleButton::LearnCircleButton()
 {
     setClickingTogglesState (false);
     setWantsKeyboardFocus (false);
+    setMouseCursor (juce::MouseCursor::PointingHandCursor);
 }
 
 void LearnCircleButton::setLearnState (
@@ -259,19 +260,59 @@ void LearnCircleButton::paintButton (
         }
     }
 
+    // P4.6 raised clickable face: shadow + hardware rim + pressed depth.
+    auto buttonShadow = faceCircle.translated (0.0f, isButtonDown ? 2.0f : 4.0f).expanded (2.4f);
+    g.setColour (juce::Colours::black.withAlpha (0.50f));
+    g.fillEllipse (buttonShadow);
+
+    auto buttonRim = faceCircle.expanded (3.0f);
+    juce::ColourGradient buttonRimGradient (
+        juce::Colour::fromRGB (66, 71, 86),
+        buttonRim.getX(), buttonRim.getY(),
+        juce::Colour::fromRGB (14, 17, 24),
+        buttonRim.getRight(), buttonRim.getBottom(),
+        false);
+    buttonRimGradient.addColour (0.44, juce::Colour::fromRGB (36, 41, 53));
+    g.setGradientFill (buttonRimGradient);
+    g.fillEllipse (buttonRim);
+    g.setColour (juce::Colours::black.withAlpha (0.72f));
+    g.drawEllipse (buttonRim, 1.5f);
+
     juce::ColourGradient face (
         ui::panelRaised.brighter (
-            isMouseOverButton ? 0.08f : 0.03f),
+            isMouseOverButton ? 0.12f : 0.045f),
         faceCircle.getTopLeft(),
-        ui::panelDeep,
+        ui::panelDeep.darker (isButtonDown ? 0.08f : 0.0f),
         faceCircle.getBottomRight(),
         false);
 
     g.setGradientFill (face);
     g.fillEllipse (faceCircle);
 
-    g.setColour (ui::borderSoft);
-    g.drawEllipse (faceCircle, 1.0f);
+    // Edge-only highlight/shadow makes the button look raised without becoming spherical.
+    juce::Path learnTopEdge;
+    learnTopEdge.addCentredArc (
+        centre.x, centre.y,
+        faceCircle.getWidth() * 0.5f - 1.5f,
+        faceCircle.getHeight() * 0.5f - 1.5f,
+        0.0f,
+        1.12f * juce::MathConstants<float>::pi,
+        1.88f * juce::MathConstants<float>::pi,
+        true);
+    g.setColour (juce::Colours::white.withAlpha (isMouseOverButton ? 0.18f : 0.11f));
+    g.strokePath (learnTopEdge, juce::PathStrokeType (1.2f));
+
+    juce::Path learnBottomEdge;
+    learnBottomEdge.addCentredArc (
+        centre.x, centre.y,
+        faceCircle.getWidth() * 0.5f - 1.5f,
+        faceCircle.getHeight() * 0.5f - 1.5f,
+        0.0f,
+        0.12f * juce::MathConstants<float>::pi,
+        0.88f * juce::MathConstants<float>::pi,
+        true);
+    g.setColour (juce::Colours::black.withAlpha (0.62f));
+    g.strokePath (learnBottomEdge, juce::PathStrokeType (1.6f));
 
     // Full 360-degree idle track. This remains visible before learning.
     g.setColour (juce::Colour::fromRGB (45, 52, 70));
@@ -684,15 +725,47 @@ void CleanLookAndFeel::drawRotarySlider (
             faceRadius * 2.0f)
             .withCentre (centre);
 
-    // Narrow graphite bezel only: avoid wide chrome/3D rings.
-    auto bezel =
-        face.expanded (primary ? 1.15f : 0.75f);
-    g.setColour (juce::Colour::fromRGB (28, 30, 36));
-    g.fillEllipse (bezel);
+    // P4.6 perimeter-only 3D edge. The face stays flat; depth comes from the rim.
+    auto edgeOuter = face.expanded (primary ? 3.2f : 1.9f);
+    juce::ColourGradient edgeGradient (
+        juce::Colour::fromRGB (72, 76, 87),
+        edgeOuter.getX(), edgeOuter.getY(),
+        juce::Colour::fromRGB (9, 10, 14),
+        edgeOuter.getRight(), edgeOuter.getBottom(),
+        false);
+    edgeGradient.addColour (0.46, juce::Colour::fromRGB (34, 37, 45));
+    g.setGradientFill (edgeGradient);
+    g.fillEllipse (edgeOuter);
+
+    auto edgeInner = face.expanded (primary ? 1.15f : 0.72f);
+    g.setColour (juce::Colour::fromRGB (22, 24, 29));
+    g.fillEllipse (edgeInner);
+    g.setColour (juce::Colours::black.withAlpha (0.78f));
+    g.drawEllipse (edgeOuter, primary ? 1.5f : 0.95f);
+
+    juce::Path knobTopEdge;
+    knobTopEdge.addCentredArc (
+        centre.x, centre.y,
+        faceRadius + (primary ? 2.0f : 1.2f),
+        faceRadius + (primary ? 2.0f : 1.2f),
+        0.0f,
+        1.08f * juce::MathConstants<float>::pi,
+        1.92f * juce::MathConstants<float>::pi,
+        true);
+    g.setColour (juce::Colours::white.withAlpha (0.11f));
+    g.strokePath (knobTopEdge, juce::PathStrokeType (primary ? 1.2f : 0.75f));
+
+    juce::Path knobBottomEdge;
+    knobBottomEdge.addCentredArc (
+        centre.x, centre.y,
+        faceRadius + (primary ? 2.0f : 1.2f),
+        faceRadius + (primary ? 2.0f : 1.2f),
+        0.0f,
+        0.08f * juce::MathConstants<float>::pi,
+        0.92f * juce::MathConstants<float>::pi,
+        true);
     g.setColour (juce::Colours::black.withAlpha (0.72f));
-    g.drawEllipse (
-        bezel,
-        primary ? 1.35f : 0.9f);
+    g.strokePath (knobBottomEdge, juce::PathStrokeType (primary ? 1.8f : 1.05f));
 
     // Mostly-flat face: linear directional shading, deliberately no radial
     // convex hotspot. This prevents the control from reading as a sphere.
@@ -743,35 +816,7 @@ void CleanLookAndFeel::drawRotarySlider (
                 0.52f);
         }
 
-        // A directional satin sheen only. No circular specular ellipse,
-        // no glossy dome, no sphere highlight.
-        juce::ColourGradient directionalSheen (
-            juce::Colours::white.withAlpha (0.042f),
-            centre.x - faceRadius * 0.70f,
-            centre.y - faceRadius * 0.64f,
-            juce::Colours::transparentWhite,
-            centre.x + faceRadius * 0.34f,
-            centre.y + faceRadius * 0.30f,
-            false);
-        g.setGradientFill (directionalSheen);
-
-        juce::Path sheenBand;
-        sheenBand.startNewSubPath (
-            face.getX(),
-            face.getY() + face.getHeight() * 0.20f);
-        sheenBand.lineTo (
-            face.getRight(),
-            face.getY() + face.getHeight() * 0.40f);
-        sheenBand.lineTo (
-            face.getRight(),
-            face.getY() + face.getHeight() * 0.53f);
-        sheenBand.lineTo (
-            face.getX(),
-            face.getY() + face.getHeight() * 0.33f);
-        sheenBand.closeSubPath();
-        g.fillPath (sheenBand);
-    }
-
+        // P4.6: no translucent sheen patch is painted over the machined face.
     // Very thin face edge, not a 3D bevel.
     g.setColour (juce::Colours::white.withAlpha (0.045f));
     g.drawEllipse (
