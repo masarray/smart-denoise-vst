@@ -10,6 +10,7 @@ on:
       - 'tools/p52_editor.py'
       - 'qa/verify_p52_profile_workflow.py'
       - 'qa/verify_concept_c_ui.py'
+      - 'qa/verify_p4_visual_fidelity.py'
 
 permissions:
   contents: write
