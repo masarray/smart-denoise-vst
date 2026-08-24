@@ -7,24 +7,19 @@ namespace
 {
 namespace ui
 {
-const auto backgroundTop = juce::Colour::fromRGB (6, 9, 16);
-const auto backgroundBottom = juce::Colour::fromRGB (11, 17, 29);
-const auto surface = juce::Colour::fromRGB (12, 17, 26);
-const auto surfaceRaised = juce::Colour::fromRGB (16, 22, 34);
-const auto surfaceSoft = juce::Colour::fromRGB (22, 29, 43);
-const auto surfaceBright = juce::Colour::fromRGB (29, 37, 54);
-const auto border = juce::Colour::fromRGB (47, 57, 78);
-const auto borderSoft = juce::Colour::fromRGB (31, 40, 57);
-const auto textPrimary = juce::Colour::fromRGB (246, 247, 251);
-const auto textSecondary = juce::Colour::fromRGB (151, 160, 184);
-const auto textMuted = juce::Colour::fromRGB (98, 108, 134);
-const auto accentPurple = juce::Colour::fromRGB (166, 96, 255);
-const auto accentBlue = juce::Colour::fromRGB (76, 130, 255);
-const auto accentCyan = juce::Colour::fromRGB (80, 204, 255);
-const auto warning = juce::Colour::fromRGB (255, 178, 82);
-
-constexpr float panelRadius = 12.0f;
-constexpr float controlRadius = 10.0f;
+const auto backgroundTop = juce::Colour::fromRGB (7, 10, 16);
+const auto backgroundBottom = juce::Colour::fromRGB (10, 16, 27);
+const auto panel = juce::Colour::fromRGB (14, 19, 29);
+const auto panelRaised = juce::Colour::fromRGB (18, 24, 36);
+const auto panelDeep = juce::Colour::fromRGB (10, 14, 22);
+const auto border = juce::Colour::fromRGB (39, 48, 66);
+const auto borderSoft = juce::Colour::fromRGB (27, 34, 48);
+const auto textPrimary = juce::Colour::fromRGB (243, 245, 250);
+const auto textSecondary = juce::Colour::fromRGB (143, 153, 177);
+const auto textMuted = juce::Colour::fromRGB (96, 108, 134);
+const auto accentPurple = juce::Colour::fromRGB (159, 92, 255);
+const auto accentBlue = juce::Colour::fromRGB (68, 132, 255);
+const auto accentCyan = juce::Colour::fromRGB (80, 197, 255);
 
 juce::ColourGradient accentGradient (juce::Rectangle<float> area)
 {
@@ -36,788 +31,891 @@ juce::ColourGradient accentGradient (juce::Rectangle<float> area)
         false);
 }
 
-juce::ColourGradient panelGradient (juce::Rectangle<float> area, bool raised)
-{
-    const auto top = raised
-        ? juce::Colour::fromRGB (20, 27, 41)
-        : juce::Colour::fromRGB (14, 20, 31);
-
-    const auto bottom = raised
-        ? juce::Colour::fromRGB (12, 17, 27)
-        : juce::Colour::fromRGB (9, 14, 23);
-
-    return juce::ColourGradient (
-        top,
-        area.getTopLeft(),
-        bottom,
-        area.getBottomLeft(),
-        false);
-}
-
-void drawPanel (
-    juce::Graphics& g,
+juce::ColourGradient panelGradient (
     juce::Rectangle<float> area,
     bool raised)
 {
-    juce::DropShadow (
-        juce::Colours::black.withAlpha (0.34f),
-        raised ? 12 : 8,
-        { 0, raised ? 4 : 2 })
-        .drawForRectangle (g, area.toNearestInt());
-
-    g.setGradientFill (panelGradient (area, raised));
-    g.fillRoundedRectangle (area, panelRadius);
-
-    g.setColour (
-        juce::Colours::white.withAlpha (
-            raised ? 0.045f : 0.028f));
-    g.drawRoundedRectangle (
-        area.reduced (1.0f),
-        panelRadius - 1.0f,
-        1.0f);
-
-    g.setColour (
-        border.withAlpha (
-            raised ? 0.74f : 0.58f));
-    g.drawRoundedRectangle (
-        area,
-        panelRadius,
-        1.0f);
+    return juce::ColourGradient (
+        raised ? panelRaised.brighter (0.05f) : panel.brighter (0.025f),
+        area.getTopLeft(),
+        raised ? panelRaised.darker (0.25f) : panel.darker (0.24f),
+        area.getBottomRight(),
+        false);
 }
 
-void drawStepHeader (
-    juce::Graphics& g,
-    juce::Rectangle<int> area,
-    int number,
-    const juce::String& text)
+float clamp01 (float value) noexcept
 {
-    auto badge = area.removeFromLeft (28).toFloat().reduced (3.0f);
-
-    g.setGradientFill (panelGradient (badge, true));
-    g.fillEllipse (badge);
-    g.setColour (border.brighter (0.28f));
-    g.drawEllipse (badge, 1.0f);
-
-    g.setColour (textPrimary);
-    g.setFont (juce::FontOptions (11.0f));
-    g.drawText (
-        juce::String (number),
-        badge.toNearestInt(),
-        juce::Justification::centred);
-
-    g.setColour (accentPurple.brighter (0.22f));
-    g.setFont (juce::FontOptions (12.8f));
-    g.drawText (
-        text,
-        area,
-        juce::Justification::centredLeft);
-}
-
-void drawHeadphoneIcon (
-    juce::Graphics& g,
-    juce::Rectangle<float> area,
-    juce::Colour colour)
-{
-    auto icon = area.withSizeKeepingCentre (
-        juce::jmin (area.getWidth(), 28.0f),
-        juce::jmin (area.getHeight(), 28.0f));
-
-    const auto centre = icon.getCentre();
-    const float radius = icon.getWidth() * 0.34f;
-
-    juce::Path arc;
-    arc.addCentredArc (
-        centre.x,
-        centre.y + 2.0f,
-        radius,
-        radius,
-        0.0f,
-        juce::MathConstants<float>::pi * 1.15f,
-        juce::MathConstants<float>::pi * 1.85f,
-        true);
-
-    g.setColour (colour);
-    g.strokePath (arc, juce::PathStrokeType (2.0f));
-
-    g.fillRoundedRectangle (
-        icon.getX() + 3.0f,
-        centre.y + 2.0f,
-        4.0f,
-        10.0f,
-        2.0f);
-
-    g.fillRoundedRectangle (
-        icon.getRight() - 7.0f,
-        centre.y + 2.0f,
-        4.0f,
-        10.0f,
-        2.0f);
-}
-
-void drawBypassIcon (
-    juce::Graphics& g,
-    juce::Rectangle<float> area,
-    juce::Colour colour)
-{
-    auto icon = area.withSizeKeepingCentre (24.0f, 24.0f);
-
-    g.setColour (colour);
-    g.drawEllipse (icon.reduced (3.5f), 1.8f);
-    g.drawLine (
-        icon.getX() + 5.0f,
-        icon.getBottom() - 5.0f,
-        icon.getRight() - 5.0f,
-        icon.getY() + 5.0f,
-        1.8f);
+    return juce::jlimit (0.0f, 1.0f, value);
 }
 
 void drawWaveformIcon (
     juce::Graphics& g,
     juce::Rectangle<float> area,
-    juce::Colour colour)
+    juce::Colour colour,
+    float stroke)
 {
-    auto icon = area.withSizeKeepingCentre (36.0f, 28.0f);
-    const auto cy = icon.getCentreY();
-
-    const std::array<float, 9> heights {
-        6.0f, 13.0f, 20.0f, 10.0f, 25.0f,
-        16.0f, 22.0f, 11.0f, 7.0f
+    const std::array<float, 13> heights {
+        0.15f, 0.34f, 0.66f, 0.40f, 0.88f, 0.54f, 1.0f,
+        0.58f, 0.82f, 0.38f, 0.66f, 0.30f, 0.15f
     };
 
-    const float step = icon.getWidth()
-        / static_cast<float> (heights.size());
-
     g.setColour (colour);
+
+    const float step =
+        area.getWidth()
+        / static_cast<float> (heights.size());
 
     for (size_t i = 0; i < heights.size(); ++i)
     {
         const float x =
-            icon.getX()
-            + step * (static_cast<float> (i) + 0.5f);
+            area.getX()
+            + (static_cast<float> (i) + 0.5f) * step;
 
-        const float h = heights[i];
+        const float half =
+            0.5f
+            * area.getHeight()
+            * heights[i];
+
         g.drawLine (
             x,
-            cy - h * 0.5f,
+            area.getCentreY() - half,
             x,
-            cy + h * 0.5f,
-            1.7f);
+            area.getCentreY() + half,
+            stroke);
     }
 }
 
-class ConceptCLookAndFeel final : public juce::LookAndFeel_V4
+void drawHeadphones (
+    juce::Graphics& g,
+    juce::Rectangle<float> area,
+    juce::Colour colour)
 {
-public:
-    ConceptCLookAndFeel()
-    {
-        setColour (
-            juce::ComboBox::textColourId,
-            textPrimary);
-        setColour (
-            juce::ComboBox::backgroundColourId,
-            surfaceSoft);
-        setColour (
-            juce::ComboBox::outlineColourId,
-            border);
-        setColour (
-            juce::PopupMenu::backgroundColourId,
-            surfaceRaised);
-        setColour (
-            juce::PopupMenu::textColourId,
-            textPrimary);
-        setColour (
-            juce::PopupMenu::highlightedBackgroundColourId,
-            accentPurple.withAlpha (0.30f));
-    }
-
-    void drawRotarySlider (
-        juce::Graphics& g,
-        int x,
-        int y,
-        int width,
-        int height,
-        float sliderPos,
-        float startAngle,
-        float endAngle,
-        juce::Slider& slider) override
-    {
-        auto bounds =
-            juce::Rectangle<float> (
-                static_cast<float> (x),
-                static_cast<float> (y),
-                static_cast<float> (width),
-                static_cast<float> (height))
-                .reduced (5.0f);
-
-        const bool primary =
-            slider.getName() == "primary";
-
-        const float diameter =
-            juce::jmin (
-                bounds.getWidth(),
-                bounds.getHeight());
-
-        const float radius =
-            diameter * (primary ? 0.425f : 0.39f);
-
-        const auto centre = bounds.getCentre();
-        const float stroke = primary ? 12.0f : 7.0f;
-
-        if (primary)
-        {
-            constexpr int tickCount = 25;
-
-            for (int i = 0; i < tickCount; ++i)
-            {
-                const float t =
-                    static_cast<float> (i)
-                    / static_cast<float> (tickCount - 1);
-
-                const float angle =
-                    startAngle
-                    + t * (endAngle - startAngle);
-
-                const auto p1 =
-                    centre.getPointOnCircumference (
-                        radius + 14.0f,
-                        angle);
-
-                const auto p2 =
-                    centre.getPointOnCircumference (
-                        radius + (i % 4 == 0 ? 19.0f : 17.0f),
-                        angle);
-
-                g.setColour (
-                    textMuted.withAlpha (
-                        i % 4 == 0 ? 0.52f : 0.28f));
-
-                g.drawLine (
-                    p1.x,
-                    p1.y,
-                    p2.x,
-                    p2.y,
-                    i % 4 == 0 ? 1.2f : 0.8f);
-            }
-        }
-
-        juce::Path baseArc;
-        baseArc.addCentredArc (
-            centre.x,
-            centre.y,
-            radius,
-            radius,
-            0.0f,
-            startAngle,
-            endAngle,
-            true);
-
-        g.setColour (
-            juce::Colour::fromRGB (43, 50, 67));
-        g.strokePath (
-            baseArc,
-            juce::PathStrokeType (
-                stroke,
-                juce::PathStrokeType::curved,
-                juce::PathStrokeType::rounded));
-
-        const float valueAngle =
-            startAngle
-            + sliderPos * (endAngle - startAngle);
-
-        juce::Path valueArc;
-        valueArc.addCentredArc (
-            centre.x,
-            centre.y,
-            radius,
-            radius,
-            0.0f,
-            startAngle,
-            valueAngle,
-            true);
-
-        auto gradientArea =
-            bounds.withSizeKeepingCentre (
-                radius * 2.18f,
-                radius * 2.18f);
-
-        g.setColour (
-            accentPurple.withAlpha (
-                primary ? 0.14f : 0.10f));
-        g.strokePath (
-            valueArc,
-            juce::PathStrokeType (
-                stroke + (primary ? 8.0f : 5.0f),
-                juce::PathStrokeType::curved,
-                juce::PathStrokeType::rounded));
-
-        g.setGradientFill (
-            accentGradient (gradientArea));
-        g.strokePath (
-            valueArc,
-            juce::PathStrokeType (
-                stroke,
-                juce::PathStrokeType::curved,
-                juce::PathStrokeType::rounded));
-
-        const float knobRadius =
-            radius - (primary ? 20.0f : 13.0f);
-
-        auto knob =
-            juce::Rectangle<float> (
-                knobRadius * 2.0f,
-                knobRadius * 2.0f)
-                .withCentre (centre);
-
-        juce::DropShadow (
-            juce::Colours::black.withAlpha (0.56f),
-            primary ? 12 : 8,
-            { 0, primary ? 5 : 3 })
-            .drawForRectangle (
-                g,
-                knob.toNearestInt());
-
-        juce::ColourGradient knobGradient (
-            juce::Colour::fromRGB (31, 38, 55),
-            centre.x - knobRadius * 0.45f,
-            centre.y - knobRadius * 0.48f,
-            juce::Colour::fromRGB (8, 12, 20),
-            centre.x + knobRadius * 0.60f,
-            centre.y + knobRadius * 0.70f,
-            true);
-
-        g.setGradientFill (knobGradient);
-        g.fillEllipse (knob);
-
-        g.setColour (
-            juce::Colours::white.withAlpha (0.055f));
-        g.drawEllipse (
-            knob.reduced (1.0f),
-            1.0f);
-
-        g.setColour (
-            border.withAlpha (0.86f));
-        g.drawEllipse (knob, 1.0f);
-
-        const auto marker =
-            centre.getPointOnCircumference (
-                radius,
-                valueAngle);
-
-        g.setColour (
-            juce::Colours::black.withAlpha (0.30f));
-        g.fillEllipse (
-            juce::Rectangle<float> (
-                primary ? 13.0f : 9.0f,
-                primary ? 13.0f : 9.0f)
-                .withCentre (
-                    marker.translated (0.0f, 1.5f)));
-
-        g.setColour (textPrimary);
-        g.fillEllipse (
-            juce::Rectangle<float> (
-                primary ? 10.0f : 7.0f,
-                primary ? 10.0f : 7.0f)
-                .withCentre (marker));
-
-        juce::String valueText;
-
-        if (primary)
-        {
-            const auto percent =
-                juce::roundToInt (
-                    sliderPos * 100.0f);
-            valueText =
-                juce::String (percent) + "%";
-        }
-        else
-        {
-            const auto percent =
-                juce::roundToInt (
-                    juce::jlimit (
-                        0.0,
-                        1.0,
-                        slider.getValue())
-                    * 100.0);
-            valueText =
-                juce::String (percent) + "%";
-        }
-
-        g.setColour (textPrimary);
-        g.setFont (
-            juce::FontOptions (
-                primary ? 38.0f : 18.0f));
-
-        g.drawFittedText (
-            valueText,
-            knob.toNearestInt().reduced (
-                primary ? 23 : 10),
-            juce::Justification::centred,
-            1);
-    }
-
-    void drawLinearSlider (
-        juce::Graphics& g,
-        int x,
-        int y,
-        int width,
-        int height,
-        float sliderPos,
-        float,
-        float,
-        juce::Slider::SliderStyle,
-        juce::Slider&) override
-    {
-        auto area =
-            juce::Rectangle<float> (
-                static_cast<float> (x),
-                static_cast<float> (y),
-                static_cast<float> (width),
-                static_cast<float> (height));
-
-        const float cy = area.getCentreY();
-        const float left = area.getX() + 5.0f;
-        const float right = area.getRight() - 5.0f;
-
-        g.setColour (
-            juce::Colour::fromRGB (42, 50, 66));
-        g.fillRoundedRectangle (
-            juce::Rectangle<float> (
-                left,
-                cy - 2.0f,
-                right - left,
-                4.0f),
-            2.0f);
-
-        auto active =
-            juce::Rectangle<float> (
-                left,
-                cy - 2.0f,
-                juce::jmax (
-                    0.0f,
-                    sliderPos - left),
-                4.0f);
-
-        g.setGradientFill (
-            accentGradient (area));
-        g.fillRoundedRectangle (active, 2.0f);
-
-        g.setColour (
-            accentPurple.withAlpha (0.18f));
-        g.fillEllipse (
-            juce::Rectangle<float> (17.0f, 17.0f)
-                .withCentre ({ sliderPos, cy }));
-
-        g.setColour (textPrimary);
-        g.fillEllipse (
-            juce::Rectangle<float> (9.0f, 9.0f)
-                .withCentre ({ sliderPos, cy }));
-    }
-
-    void drawButtonBackground (
-        juce::Graphics& g,
-        juce::Button& button,
-        const juce::Colour&,
-        bool isHighlighted,
-        bool isDown) override
-    {
-        auto area =
-            button.getLocalBounds()
-                .toFloat()
-                .reduced (0.5f);
-
-        const auto name = button.getName();
-        const bool primary = name == "learn";
-        const bool top = name == "top";
-        const bool toggled =
-            button.getToggleState();
-
-        if (primary)
-        {
-            juce::DropShadow (
-                accentPurple.withAlpha (
-                    isHighlighted ? 0.24f : 0.14f),
-                isHighlighted ? 15 : 11,
-                { 0, 1 })
-                .drawForRectangle (
-                    g,
-                    area.toNearestInt());
-
-            juce::ColourGradient fill (
-                juce::Colour::fromRGB (28, 28, 47),
-                area.getTopLeft(),
-                juce::Colour::fromRGB (13, 19, 34),
-                area.getBottomRight(),
-                false);
-
-            g.setGradientFill (fill);
-            g.fillRoundedRectangle (
-                area,
-                14.0f);
-
-            g.setColour (
-                accentPurple.withAlpha (0.20f));
-            g.fillRoundedRectangle (
-                area.reduced (1.0f),
-                13.0f);
-
-            g.setGradientFill (
-                accentGradient (area));
-            juce::Path borderPath;
-            borderPath.addRoundedRectangle (
-                area.reduced (0.5f),
-                14.0f);
-            g.strokePath (
-                borderPath,
-                juce::PathStrokeType (
-                    isDown ? 2.0f : 1.4f));
-
-            if (isHighlighted || isDown)
-            {
-                g.setColour (
-                    juce::Colours::white.withAlpha (
-                        isDown ? 0.08f : 0.035f));
-                g.fillRoundedRectangle (
-                    area.reduced (2.0f),
-                    12.0f);
-            }
-
-            return;
-        }
-
-        if (top)
-        {
-            if (isHighlighted)
-            {
-                g.setColour (
-                    surfaceSoft.withAlpha (0.72f));
-                g.fillRoundedRectangle (
-                    area,
-                    8.0f);
-            }
-
-            return;
-        }
-
-        g.setGradientFill (
-            panelGradient (area, true));
-        g.fillRoundedRectangle (
-            area,
-            controlRadius);
-
-        g.setColour (
-            toggled
-            ? accentPurple.withAlpha (0.12f)
-            : juce::Colours::transparentBlack);
-        g.fillRoundedRectangle (
-            area.reduced (1.0f),
-            controlRadius - 1.0f);
-
-        g.setColour (
-            toggled
-            ? accentBlue.withAlpha (0.82f)
-            : border.withAlpha (
-                isHighlighted ? 0.95f : 0.70f));
-
-        g.drawRoundedRectangle (
-            area,
-            controlRadius,
-            toggled ? 1.4f : 1.0f);
-    }
-
-    void drawButtonText (
-        juce::Graphics& g,
-        juce::TextButton& button,
-        bool,
-        bool) override
-    {
-        const auto name = button.getName();
-        const bool primary = name == "learn";
-        const bool top = name == "top";
-
-        const auto colour =
-            button.isEnabled()
-            ? textPrimary
-            : textSecondary.withAlpha (0.45f);
-
-        if (primary)
-        {
-            auto area =
-                button.getLocalBounds()
-                    .toFloat()
-                    .reduced (10.0f);
-
-            drawWaveformIcon (
-                g,
-                area.removeFromTop (42.0f),
-                accentPurple.brighter (0.34f));
-
-            g.setColour (textPrimary);
-            g.setFont (juce::FontOptions (16.0f));
-            g.drawFittedText (
-                button.getButtonText(),
-                area.toNearestInt().reduced (2, 2),
-                juce::Justification::centred,
-                2);
-            return;
-        }
-
-        if (name == "monitor")
-        {
-            auto area =
-                button.getLocalBounds()
-                    .toFloat()
-                    .reduced (8.0f);
-
-            drawHeadphoneIcon (
-                g,
-                area.removeFromTop (31.0f),
-                button.getToggleState()
-                    ? accentCyan
-                    : textPrimary);
-
-            g.setColour (colour);
-            g.setFont (juce::FontOptions (11.2f));
-            g.drawFittedText (
-                button.getButtonText(),
-                area.toNearestInt(),
-                juce::Justification::centred,
-                1);
-            return;
-        }
-
-        if (name == "bypassAction")
-        {
-            auto area =
-                button.getLocalBounds()
-                    .toFloat()
-                    .reduced (8.0f);
-
-            drawBypassIcon (
-                g,
-                area.removeFromTop (29.0f),
-                button.getToggleState()
-                    ? warning
-                    : textPrimary);
-
-            g.setColour (colour);
-            g.setFont (juce::FontOptions (11.2f));
-            g.drawFittedText (
-                button.getButtonText(),
-                area.toNearestInt(),
-                juce::Justification::centred,
-                1);
-            return;
-        }
-
-        g.setColour (colour);
-        g.setFont (
-            juce::FontOptions (
-                top ? 10.2f : 11.4f));
-
-        g.drawFittedText (
-            button.getButtonText(),
-            button.getLocalBounds().reduced (7, 4),
-            juce::Justification::centred,
-            1);
-    }
-
-    void drawComboBox (
-        juce::Graphics& g,
-        int width,
-        int height,
-        bool,
-        int,
-        int,
-        int,
-        int,
-        juce::ComboBox&) override
-    {
-        auto area =
-            juce::Rectangle<float> (
-                0.5f,
-                0.5f,
-                static_cast<float> (width) - 1.0f,
-                static_cast<float> (height) - 1.0f);
-
-        g.setGradientFill (
-            panelGradient (area, true));
-        g.fillRoundedRectangle (
-            area,
-            9.0f);
-
-        g.setColour (
-            juce::Colours::white.withAlpha (0.035f));
-        g.drawRoundedRectangle (
-            area.reduced (1.0f),
-            8.0f,
-            1.0f);
-
-        g.setColour (border.withAlpha (0.82f));
-        g.drawRoundedRectangle (
-            area,
-            9.0f,
-            1.0f);
-
-        juce::Path arrow;
-        const float cx =
-            static_cast<float> (width) - 15.0f;
-        const float cy =
-            static_cast<float> (height) * 0.5f;
-
-        arrow.startNewSubPath (
-            cx - 4.0f,
-            cy - 2.0f);
-        arrow.lineTo (
-            cx,
-            cy + 2.0f);
-        arrow.lineTo (
-            cx + 4.0f,
-            cy - 2.0f);
-
-        g.setColour (textSecondary);
-        g.strokePath (
-            arrow,
-            juce::PathStrokeType (1.4f));
-    }
-
-    void positionComboBoxText (
-        juce::ComboBox& box,
-        juce::Label& label) override
-    {
-        label.setBounds (
-            12,
-            0,
-            box.getWidth() - 32,
-            box.getHeight());
-
-        label.setFont (
-            juce::FontOptions (11.0f));
-
-        label.setColour (
-            juce::Label::textColourId,
-            textPrimary);
-    }
-};
+    g.setColour (colour);
+
+    auto arcArea = area.reduced (5.0f, 4.0f);
+    juce::Path arc;
+    arc.addCentredArc (
+        arcArea.getCentreX(),
+        arcArea.getCentreY() + 3.0f,
+        arcArea.getWidth() * 0.36f,
+        arcArea.getHeight() * 0.40f,
+        0.0f,
+        juce::MathConstants<float>::pi * 1.10f,
+        juce::MathConstants<float>::pi * 1.90f,
+        true);
+
+    g.strokePath (
+        arc,
+        juce::PathStrokeType (
+            2.0f,
+            juce::PathStrokeType::curved,
+            juce::PathStrokeType::rounded));
+
+    const float earW = area.getWidth() * 0.16f;
+    const float earH = area.getHeight() * 0.30f;
+    const float earY = area.getCentreY() + area.getHeight() * 0.02f;
+
+    g.fillRoundedRectangle (
+        area.getX() + area.getWidth() * 0.18f,
+        earY,
+        earW,
+        earH,
+        earW * 0.45f);
+
+    g.fillRoundedRectangle (
+        area.getRight() - area.getWidth() * 0.18f - earW,
+        earY,
+        earW,
+        earH,
+        earW * 0.45f);
+}
+
+void drawBypass (
+    juce::Graphics& g,
+    juce::Rectangle<float> area,
+    juce::Colour colour)
+{
+    g.setColour (colour);
+    auto circle = area.reduced (6.0f);
+    g.drawEllipse (circle, 2.0f);
+    g.drawLine (
+        circle.getX() + 3.0f,
+        circle.getBottom() - 3.0f,
+        circle.getRight() - 3.0f,
+        circle.getY() + 3.0f,
+        2.0f);
+}
+
+void drawChevron (
+    juce::Graphics& g,
+    juce::Point<float> centre,
+    bool up)
+{
+    juce::Path path;
+    const float direction = up ? -1.0f : 1.0f;
+
+    path.startNewSubPath (
+        centre.x - 4.0f,
+        centre.y - 2.0f * direction);
+    path.lineTo (
+        centre.x,
+        centre.y + 2.0f * direction);
+    path.lineTo (
+        centre.x + 4.0f,
+        centre.y - 2.0f * direction);
+
+    g.setColour (textSecondary);
+    g.strokePath (
+        path,
+        juce::PathStrokeType (
+            1.4f,
+            juce::PathStrokeType::curved,
+            juce::PathStrokeType::rounded));
+}
 } // namespace ui
 } // namespace
+
+namespace smartdenoiseui
+{
+LearnCircleButton::LearnCircleButton()
+    : juce::Button ("Learn Noise")
+{
+    setClickingTogglesState (false);
+    setWantsKeyboardFocus (false);
+}
+
+void LearnCircleButton::setLearnState (
+    bool learningIn,
+    float progress01,
+    bool profileReadyIn,
+    bool rejectedIn)
+{
+    learning = learningIn;
+    progress = ui::clamp01 (progress01);
+    profileReady = profileReadyIn;
+    rejected = rejectedIn;
+    repaint();
+}
+
+void LearnCircleButton::paintButton (
+    juce::Graphics& g,
+    bool isMouseOverButton,
+    bool isButtonDown)
+{
+    auto area =
+        getLocalBounds().toFloat().reduced (7.0f);
+
+    const float side =
+        juce::jmin (area.getWidth(), area.getHeight());
+
+    auto circle =
+        juce::Rectangle<float> (side, side)
+            .withCentre (area.getCentre());
+
+    const auto centre = circle.getCentre();
+    const float radius = side * 0.46f;
+    const float start =
+        juce::MathConstants<float>::pi * 1.25f;
+    const float end =
+        juce::MathConstants<float>::pi * 2.75f;
+
+    if (learning || isMouseOverButton)
+    {
+        for (int i = 4; i >= 1; --i)
+        {
+            g.setColour (
+                ui::accentPurple.withAlpha (
+                    0.025f * static_cast<float> (5 - i)));
+
+            g.drawEllipse (
+                circle.expanded (
+                    static_cast<float> (i) * 2.0f),
+                static_cast<float> (i) * 1.5f);
+        }
+    }
+
+    juce::ColourGradient face (
+        ui::panelRaised.brighter (
+            isMouseOverButton ? 0.08f : 0.03f),
+        circle.getTopLeft(),
+        ui::panelDeep,
+        circle.getBottomRight(),
+        false);
+
+    g.setGradientFill (face);
+    g.fillEllipse (circle);
+
+    g.setColour (ui::borderSoft);
+    g.drawEllipse (circle, 1.0f);
+
+    juce::Path baseArc;
+    baseArc.addCentredArc (
+        centre.x,
+        centre.y,
+        radius,
+        radius,
+        0.0f,
+        start,
+        end,
+        true);
+
+    g.setColour (juce::Colour::fromRGB (45, 52, 70));
+    g.strokePath (
+        baseArc,
+        juce::PathStrokeType (
+            7.0f,
+            juce::PathStrokeType::curved,
+            juce::PathStrokeType::rounded));
+
+    float ringProgress = 0.0f;
+    if (learning)
+        ringProgress = progress;
+    else if (profileReady)
+        ringProgress = 1.0f;
+
+    if (ringProgress > 0.001f)
+    {
+        juce::Path progressArc;
+        progressArc.addCentredArc (
+            centre.x,
+            centre.y,
+            radius,
+            radius,
+            0.0f,
+            start,
+            start + ringProgress * (end - start),
+            true);
+
+        g.setColour (
+            ui::accentPurple.withAlpha (0.18f));
+        g.strokePath (
+            progressArc,
+            juce::PathStrokeType (
+                15.0f,
+                juce::PathStrokeType::curved,
+                juce::PathStrokeType::rounded));
+
+        g.setGradientFill (
+            ui::accentGradient (circle));
+        g.strokePath (
+            progressArc,
+            juce::PathStrokeType (
+                7.0f,
+                juce::PathStrokeType::curved,
+                juce::PathStrokeType::rounded));
+    }
+
+    if (isButtonDown)
+    {
+        g.setColour (
+            juce::Colours::white.withAlpha (0.04f));
+        g.fillEllipse (circle.reduced (3.0f));
+    }
+
+    auto iconArea =
+        juce::Rectangle<float> (
+            42.0f,
+            28.0f)
+            .withCentre (
+                { centre.x,
+                  centre.y - 28.0f });
+
+    ui::drawWaveformIcon (
+        g,
+        iconArea,
+        learning
+            ? ui::accentCyan
+            : ui::accentPurple.brighter (0.28f),
+        1.6f);
+
+    juce::String mainText = "Learn Noise";
+    juce::String subText = "3 seconds";
+
+    if (learning)
+    {
+        mainText =
+            juce::String (
+                juce::roundToInt (
+                    progress * 100.0f))
+            + "%";
+        subText = "Capturing noise profile";
+    }
+    else if (profileReady)
+    {
+        mainText = "Profile Ready";
+        subText = "Click to re-learn";
+    }
+    else if (rejected)
+    {
+        mainText = "Try Again";
+        subText = "Capture noise only";
+    }
+
+    g.setColour (ui::textPrimary);
+    g.setFont (
+        juce::FontOptions (
+            learning ? 23.0f : 15.0f));
+
+    g.drawFittedText (
+        mainText,
+        juce::Rectangle<int> (
+            static_cast<int> (circle.getX() + 14.0f),
+            static_cast<int> (centre.y - 5.0f),
+            static_cast<int> (circle.getWidth() - 28.0f),
+            30),
+        juce::Justification::centred,
+        1);
+
+    g.setColour (ui::textSecondary);
+    g.setFont (juce::FontOptions (9.5f));
+
+    g.drawFittedText (
+        subText,
+        juce::Rectangle<int> (
+            static_cast<int> (circle.getX() + 10.0f),
+            static_cast<int> (centre.y + 25.0f),
+            static_cast<int> (circle.getWidth() - 20.0f),
+            19),
+        juce::Justification::centred,
+        1);
+}
+
+MonitorButton::MonitorButton (
+    const juce::String& text,
+    Icon iconIn)
+    : juce::Button (text),
+      icon (iconIn)
+{
+    setClickingTogglesState (true);
+    setWantsKeyboardFocus (false);
+}
+
+void MonitorButton::paintButton (
+    juce::Graphics& g,
+    bool isMouseOverButton,
+    bool isButtonDown)
+{
+    auto area =
+        getLocalBounds().toFloat().reduced (0.5f);
+
+    const bool active = getToggleState();
+
+    juce::ColourGradient fill (
+        active
+            ? ui::accentPurple.withAlpha (0.18f)
+            : ui::panelRaised,
+        area.getTopLeft(),
+        ui::panelDeep,
+        area.getBottomRight(),
+        false);
+
+    g.setGradientFill (fill);
+    g.fillRoundedRectangle (area, 11.0f);
+
+    g.setColour (
+        active
+            ? ui::accentBlue.withAlpha (0.78f)
+            : ui::border.withAlpha (
+                isMouseOverButton ? 0.95f : 0.72f));
+
+    g.drawRoundedRectangle (
+        area,
+        11.0f,
+        active ? 1.4f : 1.0f);
+
+    if (isButtonDown)
+    {
+        g.setColour (
+            juce::Colours::white.withAlpha (0.04f));
+        g.fillRoundedRectangle (
+            area.reduced (2.0f),
+            9.0f);
+    }
+
+    auto iconArea =
+        juce::Rectangle<float> (
+            34.0f,
+            32.0f)
+            .withCentre (
+                { area.getCentreX(),
+                  area.getY() + 25.0f });
+
+    const auto iconColour =
+        active
+            ? ui::accentCyan
+            : ui::textPrimary;
+
+    if (icon == Icon::headphones)
+        ui::drawHeadphones (
+            g, iconArea, iconColour);
+    else
+        ui::drawBypass (
+            g, iconArea, iconColour);
+
+    g.setColour (
+        active
+            ? ui::textPrimary
+            : ui::textSecondary.brighter (0.15f));
+    g.setFont (juce::FontOptions (10.2f));
+
+    g.drawFittedText (
+        getName(),
+        juce::Rectangle<int> (
+            8,
+            getHeight() - 29,
+            getWidth() - 16,
+            19),
+        juce::Justification::centred,
+        1);
+}
+
+CleanLookAndFeel::CleanLookAndFeel()
+{
+    setColour (
+        juce::ComboBox::textColourId,
+        ui::textPrimary);
+    setColour (
+        juce::ComboBox::backgroundColourId,
+        ui::panelRaised);
+    setColour (
+        juce::ComboBox::outlineColourId,
+        ui::border);
+    setColour (
+        juce::PopupMenu::backgroundColourId,
+        ui::panelRaised);
+    setColour (
+        juce::PopupMenu::textColourId,
+        ui::textPrimary);
+    setColour (
+        juce::PopupMenu::highlightedBackgroundColourId,
+        ui::accentPurple.withAlpha (0.26f));
+}
+
+void CleanLookAndFeel::drawRotarySlider (
+    juce::Graphics& g,
+    int x,
+    int y,
+    int width,
+    int height,
+    float sliderPos,
+    float startAngle,
+    float endAngle,
+    juce::Slider& slider)
+{
+    auto bounds =
+        juce::Rectangle<float> (
+            static_cast<float> (x),
+            static_cast<float> (y),
+            static_cast<float> (width),
+            static_cast<float> (height))
+            .reduced (5.0f);
+
+    const bool primary =
+        slider.getName() == "primary";
+
+    const float diameter =
+        juce::jmin (
+            bounds.getWidth(),
+            bounds.getHeight());
+
+    const float radius =
+        diameter
+        * (primary ? 0.43f : 0.39f);
+
+    const auto centre = bounds.getCentre();
+    const float stroke =
+        primary ? 11.0f : 6.5f;
+
+    if (primary)
+    {
+        constexpr int tickCount = 25;
+        for (int tick = 0; tick < tickCount; ++tick)
+        {
+            const float t =
+                static_cast<float> (tick)
+                / static_cast<float> (
+                    tickCount - 1);
+
+            const float angle =
+                startAngle
+                + t * (endAngle - startAngle);
+
+            const auto outer =
+                centre.getPointOnCircumference (
+                    radius + 15.0f,
+                    angle);
+
+            const auto inner =
+                centre.getPointOnCircumference (
+                    radius + 10.0f,
+                    angle);
+
+            g.setColour (
+                ui::border.withAlpha (0.55f));
+            g.drawLine (
+                inner.x,
+                inner.y,
+                outer.x,
+                outer.y,
+                1.0f);
+        }
+    }
+
+    juce::Path baseArc;
+    baseArc.addCentredArc (
+        centre.x,
+        centre.y,
+        radius,
+        radius,
+        0.0f,
+        startAngle,
+        endAngle,
+        true);
+
+    g.setColour (
+        juce::Colour::fromRGB (44, 51, 68));
+    g.strokePath (
+        baseArc,
+        juce::PathStrokeType (
+            stroke,
+            juce::PathStrokeType::curved,
+            juce::PathStrokeType::rounded));
+
+    const float valueAngle =
+        startAngle
+        + sliderPos * (endAngle - startAngle);
+
+    juce::Path activeArc;
+    activeArc.addCentredArc (
+        centre.x,
+        centre.y,
+        radius,
+        radius,
+        0.0f,
+        startAngle,
+        valueAngle,
+        true);
+
+    g.setColour (
+        ui::accentPurple.withAlpha (
+            primary ? 0.14f : 0.10f));
+    g.strokePath (
+        activeArc,
+        juce::PathStrokeType (
+            stroke + (primary ? 8.0f : 4.0f),
+            juce::PathStrokeType::curved,
+            juce::PathStrokeType::rounded));
+
+    g.setGradientFill (
+        ui::accentGradient (
+            bounds.withSizeKeepingCentre (
+                radius * 2.2f,
+                radius * 2.2f)));
+
+    g.strokePath (
+        activeArc,
+        juce::PathStrokeType (
+            stroke,
+            juce::PathStrokeType::curved,
+            juce::PathStrokeType::rounded));
+
+    const float knobRadius =
+        radius - (primary ? 18.0f : 11.0f);
+
+    auto knob =
+        juce::Rectangle<float> (
+            knobRadius * 2.0f,
+            knobRadius * 2.0f)
+            .withCentre (centre);
+
+    juce::ColourGradient knobGradient (
+        ui::panelRaised.brighter (0.07f),
+        centre.x,
+        knob.getY(),
+        ui::panelDeep.darker (0.18f),
+        centre.x,
+        knob.getBottom(),
+        false);
+
+    g.setGradientFill (knobGradient);
+    g.fillEllipse (knob);
+
+    g.setColour (ui::borderSoft);
+    g.drawEllipse (knob, 1.0f);
+
+    const auto marker =
+        centre.getPointOnCircumference (
+            radius,
+            valueAngle);
+
+    g.setColour (ui::textPrimary);
+    g.fillEllipse (
+        juce::Rectangle<float> (
+            primary ? 10.0f : 7.0f,
+            primary ? 10.0f : 7.0f)
+            .withCentre (marker));
+
+    juce::String valueText;
+
+    if (primary)
+    {
+        const auto percent =
+            juce::roundToInt (
+                100.0
+                * slider.getValue()
+                / smartdenoise::SmartDenoiseEngine::
+                    maxReductionDb);
+
+        valueText =
+            juce::String (percent) + "%";
+    }
+    else
+    {
+        const auto percent =
+            juce::roundToInt (
+                slider.getValue() * 100.0);
+
+        valueText =
+            juce::String (percent) + "%";
+    }
+
+    g.setColour (ui::textPrimary);
+    g.setFont (
+        juce::FontOptions (
+            primary ? 35.0f : 15.5f));
+
+    g.drawFittedText (
+        valueText,
+        knob.toNearestInt().reduced (
+            primary ? 24 : 10),
+        juce::Justification::centred,
+        1);
+}
+
+void CleanLookAndFeel::drawLinearSlider (
+    juce::Graphics& g,
+    int x,
+    int y,
+    int width,
+    int height,
+    float sliderPos,
+    float,
+    float,
+    juce::Slider::SliderStyle,
+    juce::Slider&)
+{
+    auto area =
+        juce::Rectangle<float> (
+            static_cast<float> (x),
+            static_cast<float> (y),
+            static_cast<float> (width),
+            static_cast<float> (height));
+
+    const float centreY =
+        area.getCentreY();
+
+    auto rail =
+        juce::Rectangle<float> (
+            area.getX() + 6.0f,
+            centreY - 2.0f,
+            area.getWidth() - 12.0f,
+            4.0f);
+
+    g.setColour (ui::borderSoft);
+    g.fillRoundedRectangle (
+        rail,
+        2.0f);
+
+    auto active = rail;
+    active.setWidth (
+        juce::jmax (
+            0.0f,
+            sliderPos - rail.getX()));
+
+    g.setGradientFill (
+        ui::accentGradient (rail));
+    g.fillRoundedRectangle (
+        active,
+        2.0f);
+
+    g.setColour (ui::textPrimary);
+    g.fillEllipse (
+        juce::Rectangle<float> (
+            10.0f,
+            10.0f)
+            .withCentre (
+                { sliderPos, centreY }));
+}
+
+void CleanLookAndFeel::drawButtonBackground (
+    juce::Graphics& g,
+    juce::Button& button,
+    const juce::Colour&,
+    bool isMouseOverButton,
+    bool isButtonDown)
+{
+    auto area =
+        button.getLocalBounds()
+            .toFloat()
+            .reduced (0.5f);
+
+    const bool top =
+        button.getName() == "top";
+
+    const bool footer =
+        button.getName() == "footer";
+
+    if (top)
+    {
+        if (isMouseOverButton)
+        {
+            g.setColour (
+                ui::panelRaised.withAlpha (0.75f));
+            g.fillRoundedRectangle (
+                area,
+                7.0f);
+        }
+        return;
+    }
+
+    juce::ColourGradient fill (
+        ui::panelRaised,
+        area.getTopLeft(),
+        ui::panelDeep,
+        area.getBottomRight(),
+        false);
+
+    g.setGradientFill (fill);
+    g.fillRoundedRectangle (
+        area,
+        footer ? 9.0f : 8.0f);
+
+    g.setColour (
+        ui::border.withAlpha (
+            isMouseOverButton ? 0.95f : 0.72f));
+
+    g.drawRoundedRectangle (
+        area,
+        footer ? 9.0f : 8.0f,
+        1.0f);
+
+    if (isButtonDown)
+    {
+        g.setColour (
+            juce::Colours::white.withAlpha (0.04f));
+        g.fillRoundedRectangle (
+            area.reduced (2.0f),
+            footer ? 7.0f : 6.0f);
+    }
+}
+
+void CleanLookAndFeel::drawButtonText (
+    juce::Graphics& g,
+    juce::TextButton& button,
+    bool,
+    bool)
+{
+    const bool top =
+        button.getName() == "top";
+
+    g.setColour (
+        button.isEnabled()
+            ? ui::textPrimary
+            : ui::textMuted);
+
+    g.setFont (
+        juce::FontOptions (
+            top ? 9.8f : 10.5f));
+
+    g.drawFittedText (
+        button.getButtonText(),
+        button.getLocalBounds().reduced (7, 3),
+        juce::Justification::centred,
+        1);
+}
+
+void CleanLookAndFeel::drawComboBox (
+    juce::Graphics& g,
+    int width,
+    int height,
+    bool,
+    int,
+    int,
+    int,
+    int,
+    juce::ComboBox&)
+{
+    auto area =
+        juce::Rectangle<float> (
+            0.5f,
+            0.5f,
+            static_cast<float> (width) - 1.0f,
+            static_cast<float> (height) - 1.0f);
+
+    juce::ColourGradient fill (
+        ui::panelRaised,
+        area.getTopLeft(),
+        ui::panelDeep,
+        area.getBottomRight(),
+        false);
+
+    g.setGradientFill (fill);
+    g.fillRoundedRectangle (
+        area,
+        9.0f);
+
+    g.setColour (ui::border);
+    g.drawRoundedRectangle (
+        area,
+        9.0f,
+        1.0f);
+
+    ui::drawChevron (
+        g,
+        { static_cast<float> (width - 14),
+          static_cast<float> (height) * 0.5f },
+        false);
+}
+
+void CleanLookAndFeel::positionComboBoxText (
+    juce::ComboBox& box,
+    juce::Label& label)
+{
+    label.setBounds (
+        12,
+        0,
+        box.getWidth() - 34,
+        box.getHeight());
+
+    label.setFont (
+        juce::FontOptions (10.5f));
+
+    label.setColour (
+        juce::Label::textColourId,
+        ui::textPrimary);
+}
+} // namespace smartdenoiseui
 
 SmartDenoiseAudioProcessorEditor::
 SmartDenoiseAudioProcessorEditor (
     SmartDenoiseAudioProcessor& p)
     : juce::AudioProcessorEditor (&p),
       processor (p),
-      conceptLookAndFeel (
-          std::make_unique<ui::ConceptCLookAndFeel>())
+      cleanLookAndFeel (
+          std::make_unique<
+              smartdenoiseui::CleanLookAndFeel>())
 {
     setOpaque (true);
-    setLookAndFeel (conceptLookAndFeel.get());
+    setLookAndFeel (
+        cleanLookAndFeel.get());
+
     setSize (940, 540);
 
     title.setText (
         "Smart Denoise",
         juce::dontSendNotification);
     title.setFont (
-        juce::FontOptions (21.0f));
+        juce::FontOptions (20.5f));
     title.setColour (
         juce::Label::textColourId,
         ui::textPrimary);
@@ -825,10 +923,10 @@ SmartDenoiseAudioProcessorEditor (
         juce::Justification::centredLeft);
 
     profileName.setText (
-        "Studio Noise",
+        "Noise Profile",
         juce::dontSendNotification);
     profileName.setFont (
-        juce::FontOptions (11.2f));
+        juce::FontOptions (10.5f));
     profileName.setColour (
         juce::Label::textColourId,
         ui::textPrimary);
@@ -839,7 +937,7 @@ SmartDenoiseAudioProcessorEditor (
         "No profile - learn room noise",
         juce::dontSendNotification);
     profileStatus.setFont (
-        juce::FontOptions (10.2f));
+        juce::FontOptions (9.2f));
     profileStatus.setColour (
         juce::Label::textColourId,
         ui::textSecondary);
@@ -847,62 +945,43 @@ SmartDenoiseAudioProcessorEditor (
         juce::Justification::centredLeft);
 
     quality.addItem (
-        "Balanced - Live 1024", 1);
+        "Balanced - Live 1024",
+        1);
     quality.addItem (
-        "Maximum - Clean 2048", 2);
+        "Maximum - Clean 2048",
+        2);
     quality.setTextWhenNothingSelected (
         "Balanced - Live 1024");
 
-    configureRotary (reduction, true);
-    configureRotary (preserve, false);
-    configureRotary (silence, false);
+    configureRotary (
+        reduction,
+        true);
+    configureRotary (
+        preserve,
+        false);
+    configureRotary (
+        silence,
+        false);
 
     reduction.setName ("primary");
     preserve.setName ("secondary");
     silence.setName ("secondary");
-
-    reduction.textFromValueFunction =
-        [] (double value)
-        {
-            const auto percent =
-                juce::roundToInt (
-                    100.0
-                    * value
-                    / smartdenoise::SmartDenoiseEngine::
-                        maxReductionDb);
-            return juce::String (percent) + "%";
-        };
-
-    preserve.textFromValueFunction =
-        [] (double value)
-        {
-            return juce::String (
-                juce::roundToInt (value * 100.0))
-                + "%";
-        };
-
-    silence.textFromValueFunction =
-        [] (double value)
-        {
-            return juce::String (
-                juce::roundToInt (value * 100.0))
-                + "%";
-        };
 
     profileOffset.setSliderStyle (
         juce::Slider::LinearHorizontal);
     profileOffset.setTextBoxStyle (
         juce::Slider::TextBoxRight,
         false,
-        76,
+        66,
         22);
-    profileOffset.setTextValueSuffix (" dB");
+    profileOffset.setTextValueSuffix (
+        " dB");
     profileOffset.setColour (
         juce::Slider::textBoxTextColourId,
         ui::textPrimary);
     profileOffset.setColour (
         juce::Slider::textBoxBackgroundColourId,
-        ui::surfaceRaised);
+        ui::panelDeep);
     profileOffset.setColour (
         juce::Slider::textBoxOutlineColourId,
         ui::border);
@@ -920,21 +999,14 @@ SmartDenoiseAudioProcessorEditor (
         "Profile Offset",
         juce::dontSendNotification);
 
-    reductionLabel.setFont (
-        juce::FontOptions (13.5f));
-    preserveLabel.setFont (
-        juce::FontOptions (11.8f));
-    silenceLabel.setFont (
-        juce::FontOptions (11.8f));
-    profileOffsetLabel.setFont (
-        juce::FontOptions (11.0f));
-
-    for (auto* label : {
+    for (auto* label : std::array<juce::Label*, 4> {
              &reductionLabel,
              &preserveLabel,
              &silenceLabel,
              &profileOffsetLabel })
     {
+        label->setFont (
+            juce::FontOptions (10.5f));
         label->setColour (
             juce::Label::textColourId,
             ui::textPrimary);
@@ -946,10 +1018,8 @@ SmartDenoiseAudioProcessorEditor (
     undoButton.setName ("top");
     redoButton.setName ("top");
     helpButton.setName ("top");
-    learn.setName ("learn");
-    hearRemoved.setName ("monitor");
-    bypass.setName ("bypassAction");
-    advanced.setName ("advancedAction");
+    advanced.setName ("footer");
+    advancedClose.setName ("footer");
 
     abButton.setInterceptsMouseClicks (
         false, false);
@@ -958,59 +1028,24 @@ SmartDenoiseAudioProcessorEditor (
     redoButton.setInterceptsMouseClicks (
         false, false);
 
-    hearRemoved.setClickingTogglesState (true);
-    bypass.setClickingTogglesState (true);
-
-    learnPopupTitle.setText (
-        "Learn Noise",
-        juce::dontSendNotification);
-    learnPopupTitle.setFont (
-        juce::FontOptions (17.0f));
-    learnPopupTitle.setColour (
-        juce::Label::textColourId,
-        ui::textPrimary);
-
-    learnPopupInstruction.setText (
-        "Find a section containing only room or system noise.\n"
-        "Smart Denoise captures a frozen 3-second profile.",
-        juce::dontSendNotification);
-    learnPopupInstruction.setFont (
-        juce::FontOptions (10.5f));
-    learnPopupInstruction.setColour (
-        juce::Label::textColourId,
-        ui::textSecondary);
-    learnPopupInstruction.setJustificationType (
-        juce::Justification::topLeft);
-
-    learnPopupStatus.setFont (
-        juce::FontOptions (11.0f));
-    learnPopupStatus.setColour (
-        juce::Label::textColourId,
-        ui::accentCyan);
-    learnPopupStatus.setJustificationType (
-        juce::Justification::centredLeft);
+    hearRemoved.setName (
+        "Hear Removed");
+    bypass.setName (
+        "Bypass");
 
     advancedTitle.setText (
         "Advanced",
         juce::dontSendNotification);
     advancedTitle.setFont (
-        juce::FontOptions (16.0f));
+        juce::FontOptions (15.0f));
     advancedTitle.setColour (
         juce::Label::textColourId,
         ui::textPrimary);
 
-    advancedStatus.setFont (
-        juce::FontOptions (10.5f));
-    advancedStatus.setColour (
-        juce::Label::textColourId,
-        ui::textSecondary);
-    advancedStatus.setJustificationType (
-        juce::Justification::centredLeft);
-
-    const std::array<juce::Component*, 27> components {
+    const std::array<juce::Component*, 20> components {
         &title,
-        &profileStatus,
         &profileName,
+        &profileStatus,
         &abButton,
         &undoButton,
         &redoButton,
@@ -1019,6 +1054,7 @@ SmartDenoiseAudioProcessorEditor (
         &hearRemoved,
         &bypass,
         &advanced,
+        &advancedClose,
         &quality,
         &reduction,
         &preserve,
@@ -1026,60 +1062,59 @@ SmartDenoiseAudioProcessorEditor (
         &profileOffset,
         &reductionLabel,
         &preserveLabel,
-        &silenceLabel,
-        &profileOffsetLabel,
-        &learnPopupTitle,
-        &learnPopupInstruction,
-        &learnPopupStatus,
-        &learnPopupClose,
-        &advancedTitle,
-        &advancedStatus,
-        &advancedClose
+        &silenceLabel
     };
 
     for (auto* component : components)
         addAndMakeVisible (component);
 
-    auto& state = processor.getParameters();
+    addAndMakeVisible (profileOffsetLabel);
+    addAndMakeVisible (advancedTitle);
+
+    auto& state =
+        processor.getParameters();
 
     reductionAttachment =
         std::make_unique<SliderAttachment> (
-            state, "reduction", reduction);
+            state,
+            "reduction",
+            reduction);
 
     preserveAttachment =
         std::make_unique<SliderAttachment> (
-            state, "preserve", preserve);
+            state,
+            "preserve",
+            preserve);
 
     silenceAttachment =
         std::make_unique<SliderAttachment> (
-            state, "silence", silence);
+            state,
+            "silence",
+            silence);
 
     offsetAttachment =
         std::make_unique<SliderAttachment> (
-            state, "thresholdOffset", profileOffset);
+            state,
+            "thresholdOffset",
+            profileOffset);
 
     removedAttachment =
         std::make_unique<ButtonAttachment> (
-            state, "hearRemoved", hearRemoved);
+            state,
+            "hearRemoved",
+            hearRemoved);
 
     qualityAttachment =
         std::make_unique<ComboAttachment> (
-            state, "quality", quality);
+            state,
+            "quality",
+            quality);
 
     learn.onClick =
         [this]
         {
-            if (advancedDrawerVisible)
-                showAdvancedDrawer (false);
-
-            processor.startNoiseLearn();
-            showLearnPopup (true);
-        };
-
-    learnPopupClose.onClick =
-        [this]
-        {
-            showLearnPopup (false);
+            if (! processor.getEngine().isLearning())
+                processor.startNoiseLearn();
         };
 
     advanced.onClick =
@@ -1108,7 +1143,6 @@ SmartDenoiseAudioProcessorEditor (
                 bypass.getToggleState());
         };
 
-    showLearnPopup (false);
     showAdvancedDrawer (false);
     syncBypassButton();
 
@@ -1122,66 +1156,37 @@ SmartDenoiseAudioProcessorEditor::
     setLookAndFeel (nullptr);
 }
 
-void SmartDenoiseAudioProcessorEditor::configureRotary (
+void SmartDenoiseAudioProcessorEditor::
+configureRotary (
     juce::Slider& slider,
     bool primary)
 {
     slider.setSliderStyle (
         juce::Slider::RotaryHorizontalVerticalDrag);
-
     slider.setTextBoxStyle (
         juce::Slider::NoTextBox,
         false,
         0,
         0);
-
     slider.setMouseDragSensitivity (
-        primary ? 280 : 190);
+        primary ? 240 : 180);
 }
 
-void SmartDenoiseAudioProcessorEditor::showLearnPopup (
+void SmartDenoiseAudioProcessorEditor::
+showAdvancedDrawer (
     bool shouldShow)
 {
-    learnPopupVisible = shouldShow;
+    advancedDrawerVisible =
+        shouldShow;
 
-    const bool mainVisible = ! shouldShow;
-
-    profileName.setVisible (mainVisible);
-    profileStatus.setVisible (mainVisible);
-    learn.setVisible (mainVisible);
-    reduction.setVisible (mainVisible);
-    preserve.setVisible (mainVisible);
-    silence.setVisible (mainVisible);
-    reductionLabel.setVisible (mainVisible);
-    preserveLabel.setVisible (mainVisible);
-    silenceLabel.setVisible (mainVisible);
-    hearRemoved.setVisible (mainVisible);
-    bypass.setVisible (mainVisible);
-    advanced.setVisible (mainVisible);
-    quality.setVisible (mainVisible);
-
-    learnPopupTitle.setVisible (shouldShow);
-    learnPopupInstruction.setVisible (shouldShow);
-    learnPopupStatus.setVisible (shouldShow);
-    learnPopupClose.setVisible (shouldShow);
-
-    resized();
-    repaint();
-}
-
-void SmartDenoiseAudioProcessorEditor::showAdvancedDrawer (
-    bool shouldShow)
-{
-    if (shouldShow && learnPopupVisible)
-        showLearnPopup (false);
-
-    advancedDrawerVisible = shouldShow;
-
-    profileOffset.setVisible (shouldShow);
-    profileOffsetLabel.setVisible (shouldShow);
-    advancedTitle.setVisible (shouldShow);
-    advancedStatus.setVisible (shouldShow);
-    advancedClose.setVisible (shouldShow);
+    profileOffset.setVisible (
+        shouldShow);
+    profileOffsetLabel.setVisible (
+        shouldShow);
+    advancedTitle.setVisible (
+        shouldShow);
+    advancedClose.setVisible (
+        shouldShow);
 
     setSize (
         940,
@@ -1191,12 +1196,13 @@ void SmartDenoiseAudioProcessorEditor::showAdvancedDrawer (
     repaint();
 }
 
-void SmartDenoiseAudioProcessorEditor::setBypassed (
+void SmartDenoiseAudioProcessorEditor::
+setBypassed (
     bool shouldBypass)
 {
     if (auto* parameter =
-            processor.getParameters().getParameter (
-                "enabled"))
+            processor.getParameters()
+                .getParameter ("enabled"))
     {
         parameter->beginChangeGesture();
         parameter->setValueNotifyingHost (
@@ -1205,16 +1211,101 @@ void SmartDenoiseAudioProcessorEditor::setBypassed (
     }
 }
 
-void SmartDenoiseAudioProcessorEditor::syncBypassButton()
+void SmartDenoiseAudioProcessorEditor::
+syncBypassButton()
 {
     if (const auto* enabledValue =
             processor.getParameters()
-                .getRawParameterValue ("enabled"))
+                .getRawParameterValue (
+                    "enabled"))
     {
         bypass.setToggleState (
             enabledValue->load() < 0.5f,
             juce::dontSendNotification);
     }
+}
+
+void SmartDenoiseAudioProcessorEditor::drawPanel (
+    juce::Graphics& g,
+    juce::Rectangle<int> bounds,
+    bool raised)
+{
+    auto area =
+        bounds.toFloat();
+
+    for (int i = 4; i >= 1; --i)
+    {
+        g.setColour (
+            juce::Colours::black.withAlpha (
+                0.035f
+                * static_cast<float> (5 - i)));
+
+        g.fillRoundedRectangle (
+            area.translated (
+                0.0f,
+                static_cast<float> (i)),
+            12.0f);
+    }
+
+    g.setGradientFill (
+        ui::panelGradient (
+            area,
+            raised));
+    g.fillRoundedRectangle (
+        area,
+        12.0f);
+
+    g.setColour (
+        ui::border.withAlpha (0.72f));
+    g.drawRoundedRectangle (
+        area,
+        12.0f,
+        1.0f);
+
+    g.setColour (
+        juce::Colours::white.withAlpha (0.022f));
+    g.drawRoundedRectangle (
+        area.reduced (1.0f),
+        11.0f,
+        1.0f);
+}
+
+void SmartDenoiseAudioProcessorEditor::
+drawStepHeader (
+    juce::Graphics& g,
+    juce::Rectangle<int> area,
+    int number,
+    const juce::String& text)
+{
+    auto badge =
+        area.removeFromLeft (25)
+            .toFloat()
+            .reduced (3.0f);
+
+    g.setColour (ui::panelRaised);
+    g.fillEllipse (badge);
+    g.setColour (
+        ui::border.brighter (0.25f));
+    g.drawEllipse (
+        badge,
+        1.0f);
+
+    g.setColour (ui::textPrimary);
+    g.setFont (
+        juce::FontOptions (10.5f));
+    g.drawText (
+        juce::String (number),
+        badge.toNearestInt(),
+        juce::Justification::centred);
+
+    g.setColour (
+        ui::accentPurple.brighter (0.22f));
+    g.setFont (
+        juce::FontOptions (10.8f));
+    g.drawText (
+        text,
+        area,
+        juce::Justification::centredLeft);
 }
 
 void SmartDenoiseAudioProcessorEditor::paint (
@@ -1225,7 +1316,7 @@ void SmartDenoiseAudioProcessorEditor::paint (
         0.0f,
         0.0f,
         ui::backgroundBottom,
-        static_cast<float> (getWidth()),
+        0.0f,
         static_cast<float> (getHeight()),
         false);
 
@@ -1233,15 +1324,7 @@ void SmartDenoiseAudioProcessorEditor::paint (
     g.fillAll();
 
     g.setColour (
-        ui::accentBlue.withAlpha (0.025f));
-    g.fillEllipse (
-        static_cast<float> (getWidth()) * 0.45f,
-        -170.0f,
-        650.0f,
-        420.0f);
-
-    g.setColour (
-        ui::border.withAlpha (0.78f));
+        ui::border.withAlpha (0.70f));
     g.drawRoundedRectangle (
         getLocalBounds()
             .toFloat()
@@ -1258,287 +1341,203 @@ void SmartDenoiseAudioProcessorEditor::paint (
 
     if (advancedDrawerVisible)
         drawAdvancedDrawer (g);
-
-    if (learnPopupVisible)
-        drawLearnPopup (g);
 }
 
-void SmartDenoiseAudioProcessorEditor::drawHeader (
+void SmartDenoiseAudioProcessorEditor::
+drawHeader (
     juce::Graphics& g)
 {
-    auto header =
-        juce::Rectangle<float> (
-            14.0f,
-            10.0f,
-            static_cast<float> (getWidth() - 28),
-            56.0f);
-
-    ui::drawPanel (g, header, true);
+    drawPanel (
+        g,
+        headerBounds,
+        true);
 
     auto logoArea =
         juce::Rectangle<float> (
-            27.0f,
-            23.0f,
+            static_cast<float> (
+                headerBounds.getX() + 15),
+            static_cast<float> (
+                headerBounds.getY() + 11),
             28.0f,
-            26.0f);
+            30.0f);
 
-    juce::Path waveform;
-    waveform.startNewSubPath (
-        logoArea.getX(),
-        logoArea.getCentreY());
-    waveform.lineTo (
-        logoArea.getX() + 4.0f,
-        logoArea.getCentreY());
-    waveform.lineTo (
-        logoArea.getX() + 8.0f,
-        logoArea.getY() + 2.0f);
-    waveform.lineTo (
-        logoArea.getX() + 12.0f,
-        logoArea.getBottom() - 2.0f);
-    waveform.lineTo (
-        logoArea.getX() + 17.0f,
-        logoArea.getY() + 6.0f);
-    waveform.lineTo (
-        logoArea.getX() + 21.0f,
-        logoArea.getCentreY());
-    waveform.lineTo (
-        logoArea.getRight(),
-        logoArea.getCentreY());
+    ui::drawWaveformIcon (
+        g,
+        logoArea,
+        ui::accentPurple.brighter (0.22f),
+        1.7f);
 
     g.setColour (
-        ui::accentPurple.withAlpha (0.16f));
-    g.strokePath (
-        waveform,
-        juce::PathStrokeType (6.0f));
+        ui::borderSoft.withAlpha (0.78f));
+    g.drawVerticalLine (
+        headerBounds.getX() + 300,
+        static_cast<float> (
+            headerBounds.getY() + 11),
+        static_cast<float> (
+            headerBounds.getBottom() - 11));
 
-    g.setGradientFill (
-        ui::accentGradient (logoArea));
-    g.strokePath (
-        waveform,
-        juce::PathStrokeType (2.2f));
-
-    g.setColour (
-        ui::borderSoft.withAlpha (0.90f));
-    g.drawLine (
-        315.0f,
-        22.0f,
-        315.0f,
-        54.0f,
-        1.0f);
-
-    g.drawLine (
-        695.0f,
-        22.0f,
-        695.0f,
-        54.0f,
-        1.0f);
+    g.drawVerticalLine (
+        headerBounds.getRight() - 230,
+        static_cast<float> (
+            headerBounds.getY() + 11),
+        static_cast<float> (
+            headerBounds.getBottom() - 11));
 }
 
-void SmartDenoiseAudioProcessorEditor::drawCaptureSection (
+void SmartDenoiseAudioProcessorEditor::
+drawCaptureSection (
     juce::Graphics& g)
 {
-    ui::drawPanel (
+    drawPanel (
         g,
-        captureBounds.toFloat(),
+        captureBounds,
         false);
 
-    ui::drawStepHeader (
+    drawStepHeader (
         g,
         juce::Rectangle<int> (
             captureBounds.getX() + 14,
             captureBounds.getY() + 12,
             captureBounds.getWidth() - 28,
-            24),
+            23),
         1,
         "CAPTURE");
-
-    if (learnPopupVisible)
-        return;
-
-    auto halo =
-        learn.getBounds()
-            .toFloat()
-            .expanded (4.0f);
-
-    g.setColour (
-        ui::accentPurple.withAlpha (0.045f));
-    g.fillRoundedRectangle (
-        halo,
-        17.0f);
 
     auto profilePill =
         juce::Rectangle<float> (
             static_cast<float> (
-                captureBounds.getX() + 18),
+                captureBounds.getX() + 20),
             static_cast<float> (
-                captureBounds.getY() + 199),
+                captureBounds.getY() + 235),
             static_cast<float> (
-                captureBounds.getWidth() - 36),
-            30.0f);
+                captureBounds.getWidth() - 40),
+            28.0f);
 
-    g.setGradientFill (
-        ui::panelGradient (
-            profilePill,
-            true));
+    g.setColour (ui::panelDeep);
     g.fillRoundedRectangle (
         profilePill,
-        15.0f);
+        14.0f);
 
     g.setColour (
-        ui::border.withAlpha (0.72f));
+        ui::border.withAlpha (0.76f));
     g.drawRoundedRectangle (
         profilePill,
-        15.0f,
+        14.0f,
         1.0f);
 
-    g.setColour (ui::accentPurple);
+    g.setColour (
+        processor.getEngine().hasProfile()
+            ? ui::accentCyan
+            : ui::accentPurple);
+
     g.fillEllipse (
-        profilePill.getX() + 10.0f,
-        profilePill.getCentreY() - 4.0f,
-        8.0f,
-        8.0f);
+        profilePill.getX() + 11.0f,
+        profilePill.getCentreY() - 3.5f,
+        7.0f,
+        7.0f);
 
-    juce::Path caret;
-    caret.startNewSubPath (
-        profilePill.getRight() - 17.0f,
-        profilePill.getCentreY() - 2.0f);
-    caret.lineTo (
-        profilePill.getRight() - 13.0f,
-        profilePill.getCentreY() + 2.0f);
-    caret.lineTo (
-        profilePill.getRight() - 9.0f,
-        profilePill.getCentreY() - 2.0f);
+    ui::drawChevron (
+        g,
+        { profilePill.getRight() - 12.0f,
+          profilePill.getCentreY() },
+        false);
 
     g.setColour (ui::textSecondary);
-    g.strokePath (
-        caret,
-        juce::PathStrokeType (1.2f));
-
-    g.setColour (ui::textSecondary);
-    g.setFont (juce::FontOptions (10.0f));
+    g.setFont (
+        juce::FontOptions (9.0f));
     g.drawText (
         "Profile Health",
-        captureBounds.getX() + 18,
-        captureBounds.getY() + 239,
-        captureBounds.getWidth() - 36,
-        18,
+        captureBounds.getX() + 20,
+        captureBounds.getY() + 273,
+        captureBounds.getWidth() - 40,
+        17,
         juce::Justification::centredLeft);
 
     auto health =
         juce::Rectangle<float> (
             static_cast<float> (
-                captureBounds.getX() + 18),
+                captureBounds.getX() + 20),
             static_cast<float> (
-                captureBounds.getY() + 264),
+                captureBounds.getY() + 298),
             static_cast<float> (
-                captureBounds.getWidth() - 72),
-            6.0f);
+                captureBounds.getWidth() - 68),
+            5.0f);
 
-    g.setColour (
-        juce::Colour::fromRGB (41, 48, 64));
+    g.setColour (ui::borderSoft);
     g.fillRoundedRectangle (
         health,
-        3.0f);
+        2.5f);
 
     const float qualityValue =
         processor.getEngine().hasProfile()
-        ? juce::jlimit (
-              0.0f,
-              1.0f,
-              processor.getEngine()
-                  .getProfileQuality())
-        : 0.0f;
+            ? ui::clamp01 (
+                  processor.getEngine()
+                      .getProfileQuality())
+            : 0.0f;
 
-    auto qualityFill = health;
-    qualityFill.setWidth (
-        health.getWidth() * qualityValue);
+    auto fill = health;
+    fill.setWidth (
+        health.getWidth()
+        * qualityValue);
 
     g.setGradientFill (
         ui::accentGradient (health));
     g.fillRoundedRectangle (
-        qualityFill,
-        3.0f);
+        fill,
+        2.5f);
 
     g.setColour (
         processor.getEngine().hasProfile()
-        ? ui::accentCyan
-        : ui::textMuted);
+            ? ui::accentCyan
+            : ui::textMuted);
+
     g.setFont (
-        juce::FontOptions (10.0f));
+        juce::FontOptions (9.0f));
 
     g.drawText (
         processor.getEngine().hasProfile()
-        ? (qualityValue > 0.72f
-               ? "Good"
-               : (qualityValue > 0.45f
-                      ? "Fair"
-                      : "Low"))
-        : "--",
-        captureBounds.getRight() - 58,
-        captureBounds.getY() + 254,
-        42,
-        22,
+            ? juce::String (
+                  juce::roundToInt (
+                      qualityValue * 100.0f))
+                  + "%"
+            : "--",
+        captureBounds.getRight() - 47,
+        captureBounds.getY() + 290,
+        29,
+        20,
         juce::Justification::centredRight);
-
-    if (processor.getEngine().hasProfile())
-    {
-        auto frozen =
-            juce::Rectangle<float> (
-                static_cast<float> (
-                    captureBounds.getX() + 18),
-                static_cast<float> (
-                    captureBounds.getBottom() - 49),
-                static_cast<float> (
-                    captureBounds.getWidth() - 36),
-                28.0f);
-
-        g.setColour (
-            ui::accentBlue.withAlpha (0.07f));
-        g.fillRoundedRectangle (
-            frozen,
-            8.0f);
-
-        g.setColour (
-            ui::accentBlue.withAlpha (0.40f));
-        g.drawRoundedRectangle (
-            frozen,
-            8.0f,
-            1.0f);
-
-        g.setColour (ui::accentCyan);
-        g.setFont (juce::FontOptions (10.0f));
-        g.drawText (
-            "FROZEN PROFILE",
-            frozen.toNearestInt(),
-            juce::Justification::centred);
-    }
 }
 
-void SmartDenoiseAudioProcessorEditor::drawCleanSection (
+void SmartDenoiseAudioProcessorEditor::
+drawCleanSection (
     juce::Graphics& g)
 {
-    ui::drawPanel (
+    drawPanel (
         g,
-        cleanBounds.toFloat(),
+        cleanBounds,
         true);
 
-    ui::drawStepHeader (
+    drawStepHeader (
         g,
         juce::Rectangle<int> (
             cleanBounds.getX() + 14,
             cleanBounds.getY() + 12,
             cleanBounds.getWidth() - 28,
-            24),
+            23),
         2,
         "CLEAN");
 
-    if (learnPopupVisible)
-        return;
+    g.setColour (
+        ui::borderSoft.withAlpha (0.78f));
+    g.drawVerticalLine (
+        cleanBounds.getX() + 302,
+        static_cast<float> (
+            cleanBounds.getY() + 52),
+        static_cast<float> (
+            cleanBounds.getBottom() - 20));
 
     const float normalizedReduction =
-        juce::jlimit (
-            0.0f,
-            1.0f,
+        ui::clamp01 (
             static_cast<float> (
                 reduction.getValue()
                 / smartdenoise::SmartDenoiseEngine::
@@ -1550,85 +1549,69 @@ void SmartDenoiseAudioProcessorEditor::drawCleanSection (
     else if (normalizedReduction > 0.30f)
         character = "Moderate";
 
-    auto macroGlow =
-        reduction.getBounds()
-            .toFloat()
-            .reduced (42.0f);
-
-    g.setColour (
-        ui::accentPurple.withAlpha (0.025f));
-    g.fillEllipse (macroGlow);
-
     g.setColour (ui::textSecondary);
-    g.setFont (juce::FontOptions (10.5f));
+    g.setFont (
+        juce::FontOptions (9.4f));
     g.drawText (
         character,
         reduction.getX(),
         reduction.getBottom() - 22,
         reduction.getWidth(),
-        18,
+        17,
         juce::Justification::centred);
 
     g.setColour (
-        ui::borderSoft.withAlpha (0.90f));
-    g.drawVerticalLine (
-        preserve.getX() - 15,
-        static_cast<float> (
-            cleanBounds.getY() + 58),
-        static_cast<float> (
-            cleanBounds.getBottom() - 24));
+        ui::textMuted);
+    g.setFont (
+        juce::FontOptions (8.6f));
 
-    g.setColour (
-        ui::textMuted.withAlpha (0.92f));
-    g.setFont (juce::FontOptions (9.0f));
-
-    g.drawText (
-        "Protect presence + consonants",
-        preserve.getX() - 15,
-        preserve.getBottom() - 1,
-        preserve.getWidth() + 30,
+    g.drawFittedText (
+        "Protect voice presence",
+        preserve.getX() - 5,
+        preserve.getBottom() + 2,
+        preserve.getWidth() + 10,
         16,
-        juce::Justification::centred);
+        juce::Justification::centred,
+        1);
 
-    g.drawText (
-        "Quiet-region clean-up",
-        silence.getX() - 15,
-        silence.getBottom() - 1,
-        silence.getWidth() + 30,
+    g.drawFittedText (
+        "Clean quiet regions",
+        silence.getX() - 5,
+        silence.getBottom() + 2,
+        silence.getWidth() + 10,
         16,
-        juce::Justification::centred);
+        juce::Justification::centred,
+        1);
 }
 
-void SmartDenoiseAudioProcessorEditor::drawCheckSection (
+void SmartDenoiseAudioProcessorEditor::
+drawCheckSection (
     juce::Graphics& g)
 {
-    ui::drawPanel (
+    drawPanel (
         g,
-        checkBounds.toFloat(),
+        checkBounds,
         false);
 
-    ui::drawStepHeader (
+    drawStepHeader (
         g,
         juce::Rectangle<int> (
             checkBounds.getX() + 14,
             checkBounds.getY() + 12,
             checkBounds.getWidth() - 28,
-            24),
+            23),
         3,
         "CHECK");
-
-    if (learnPopupVisible)
-        return;
 
     drawMeter (
         g,
         juce::Rectangle<float> (
             static_cast<float> (
-                checkBounds.getRight() - 60),
+                checkBounds.getRight() - 57),
             static_cast<float> (
-                checkBounds.getY() + 82),
-            14.0f,
-            174.0f),
+                checkBounds.getY() + 72),
+            11.0f,
+            142.0f),
         displayedInputDb,
         "IN");
 
@@ -1636,133 +1619,71 @@ void SmartDenoiseAudioProcessorEditor::drawCheckSection (
         g,
         juce::Rectangle<float> (
             static_cast<float> (
-                checkBounds.getRight() - 33),
+                checkBounds.getRight() - 32),
             static_cast<float> (
-                checkBounds.getY() + 82),
-            14.0f,
-            174.0f),
+                checkBounds.getY() + 72),
+            11.0f,
+            142.0f),
         displayedOutputDb,
         "OUT");
 
     const auto analysis =
-        processor.getEngine().getFrameAnalysis();
-
-    g.setColour (
-        ui::borderSoft.withAlpha (0.88f));
-    g.drawHorizontalLine (
-        checkBounds.getBottom() - 80,
-        static_cast<float> (
-            checkBounds.getX() + 16),
-        static_cast<float> (
-            checkBounds.getRight() - 16));
-
-    auto drawTelemetry =
-        [&] (int y,
-             const juce::String& label,
-             float value,
-             juce::Colour colour)
-        {
-            const auto x =
-                checkBounds.getX() + 16;
-            const auto w =
-                checkBounds.getWidth() - 32;
-
-            g.setColour (ui::textSecondary);
-            g.setFont (juce::FontOptions (9.2f));
-            g.drawText (
-                label,
-                x,
-                y,
-                108,
-                15,
-                juce::Justification::centredLeft);
-
-            g.setColour (colour);
-            g.drawText (
-                juce::String (
-                    juce::roundToInt (
-                        value * 100.0f))
-                    + "%",
-                x + 112,
-                y,
-                w - 112,
-                15,
-                juce::Justification::centredRight);
-
-            auto bar =
-                juce::Rectangle<float> (
-                    static_cast<float> (x),
-                    static_cast<float> (y + 18),
-                    static_cast<float> (w),
-                    3.0f);
-
-            g.setColour (
-                juce::Colour::fromRGB (38, 46, 61));
-            g.fillRoundedRectangle (
-                bar,
-                1.5f);
-
-            auto fill = bar;
-            fill.setWidth (
-                bar.getWidth()
-                * juce::jlimit (
-                    0.0f,
-                    1.0f,
-                    value));
-
-            g.setColour (colour.withAlpha (0.85f));
-            g.fillRoundedRectangle (
-                fill,
-                1.5f);
-        };
+        processor.getEngine()
+            .getFrameAnalysis();
 
     drawTelemetry (
-        checkBounds.getBottom() - 68,
-        "P3 DETAIL GUARD",
-        analysis.detailProtection,
-        ui::accentCyan);
+        g,
+        juce::Rectangle<int> (
+            checkBounds.getX() + 14,
+            checkBounds.getBottom() - 77,
+            checkBounds.getWidth() - 28,
+            27),
+        "DETAIL GUARD",
+        analysis.detailProtection);
 
     drawTelemetry (
-        checkBounds.getBottom() - 39,
+        g,
+        juce::Rectangle<int> (
+            checkBounds.getX() + 14,
+            checkBounds.getBottom() - 43,
+            checkBounds.getWidth() - 28,
+            27),
         "TAIL PROTECT",
-        analysis.tailProtection,
-        ui::accentPurple.brighter (0.22f));
+        analysis.tailProtection);
 }
 
-void SmartDenoiseAudioProcessorEditor::drawActivityStrip (
+void SmartDenoiseAudioProcessorEditor::
+drawActivityStrip (
     juce::Graphics& g)
 {
-    ui::drawPanel (
+    drawPanel (
         g,
-        activityBounds.toFloat(),
+        activityBounds,
         false);
 
     auto graph =
-        activityBounds.reduced (52, 10).toFloat();
-
-    const float cy = graph.getCentreY();
+        activityBounds
+            .reduced (52, 11)
+            .toFloat();
 
     g.setColour (
-        ui::borderSoft.withAlpha (0.90f));
+        ui::borderSoft.withAlpha (0.72f));
     g.drawLine (
         graph.getX(),
-        cy,
+        graph.getCentreY(),
         graph.getRight(),
-        cy,
+        graph.getCentreY(),
         1.0f);
 
-    g.setColour (
-        ui::borderSoft.withAlpha (0.65f));
     g.drawLine (
         graph.getCentreX(),
-        graph.getY(),
+        graph.getY() + 3.0f,
         graph.getCentreX(),
-        graph.getBottom(),
+        graph.getBottom() - 3.0f,
         1.0f);
 
     auto makePath =
-        [&] (const std::array<float, 112>& values,
-             float phase)
+        [&] (const std::array<float, 112>& values)
         {
             juce::Path path;
 
@@ -1771,11 +1692,9 @@ void SmartDenoiseAudioProcessorEditor::drawActivityStrip (
                  ++i)
             {
                 const float norm =
-                    juce::jlimit (
-                        0.0f,
-                        1.0f,
+                    ui::clamp01 (
                         (values[i] + 72.0f)
-                            / 72.0f);
+                        / 72.0f);
 
                 const float x =
                     graph.getX()
@@ -1784,18 +1703,14 @@ void SmartDenoiseAudioProcessorEditor::drawActivityStrip (
                         / static_cast<float> (
                             values.size() - 1);
 
-                const float oscillation =
-                    std::sin (
-                        static_cast<float> (i)
-                            * 0.62f
-                        + phase);
+                const float excursion =
+                    (norm - 0.5f)
+                    * graph.getHeight()
+                    * 0.78f;
 
                 const float y =
-                    cy
-                    - oscillation
-                        * norm
-                        * graph.getHeight()
-                        * 0.32f;
+                    graph.getCentreY()
+                    - excursion;
 
                 if (i == 0)
                     path.startNewSubPath (x, y);
@@ -1807,441 +1722,266 @@ void SmartDenoiseAudioProcessorEditor::drawActivityStrip (
         };
 
     const auto inputPath =
-        makePath (
-            inputHistory,
-            0.0f);
-
+        makePath (inputHistory);
     const auto outputPath =
-        makePath (
-            outputHistory,
-            0.85f);
+        makePath (outputHistory);
 
     g.setColour (
-        ui::accentPurple.withAlpha (0.11f));
+        ui::accentPurple.withAlpha (0.08f));
     g.strokePath (
         inputPath,
         juce::PathStrokeType (5.0f));
 
     g.setColour (
-        ui::accentBlue.withAlpha (0.11f));
+        ui::accentBlue.withAlpha (0.08f));
     g.strokePath (
         outputPath,
         juce::PathStrokeType (5.0f));
 
     g.setColour (
-        ui::accentPurple.withAlpha (0.80f));
+        ui::accentPurple.withAlpha (0.82f));
     g.strokePath (
         inputPath,
         juce::PathStrokeType (1.2f));
 
     g.setColour (
-        ui::accentBlue.brighter (0.14f));
+        ui::accentBlue.brighter (0.12f));
     g.strokePath (
         outputPath,
-        juce::PathStrokeType (1.35f));
+        juce::PathStrokeType (1.25f));
 
-    g.setColour (ui::textSecondary);
-    g.setFont (juce::FontOptions (9.3f));
+    g.setColour (ui::textMuted);
+    g.setFont (
+        juce::FontOptions (8.8f));
 
     g.drawText (
         "Input",
         activityBounds.getX() + 14,
-        activityBounds.getCentreY() - 10,
-        38,
-        20,
+        activityBounds.getCentreY() - 9,
+        34,
+        18,
         juce::Justification::centredLeft);
 
     g.drawText (
         "Output",
-        activityBounds.getRight() - 51,
-        activityBounds.getCentreY() - 10,
-        39,
-        20,
+        activityBounds.getRight() - 48,
+        activityBounds.getCentreY() - 9,
+        34,
+        18,
         juce::Justification::centredRight);
 }
 
-void SmartDenoiseAudioProcessorEditor::drawFooter (
+void SmartDenoiseAudioProcessorEditor::
+drawFooter (
     juce::Graphics& g)
 {
-    ui::drawPanel (
+    drawPanel (
         g,
-        footerBounds.toFloat(),
+        footerBounds,
         false);
 
-    if (learnPopupVisible)
-        return;
-
     g.setColour (ui::textMuted);
-    g.setFont (juce::FontOptions (9.3f));
+    g.setFont (
+        juce::FontOptions (8.5f));
 
     g.drawText (
         "QUALITY",
-        quality.getX() - 54,
+        quality.getX() - 49,
         quality.getY(),
-        48,
+        42,
         quality.getHeight(),
         juce::Justification::centredRight);
 
-    g.setColour (
-        ui::textMuted.withAlpha (0.86f));
-    g.setFont (juce::FontOptions (9.0f));
-
     g.drawText (
         "Smart Denoise  v0.4",
-        footerBounds.getRight() - 136,
+        footerBounds.getRight() - 134,
         footerBounds.getY(),
-        122,
+        118,
         footerBounds.getHeight(),
         juce::Justification::centredRight);
 }
 
-void SmartDenoiseAudioProcessorEditor::drawLearnPopup (
+void SmartDenoiseAudioProcessorEditor::
+drawAdvancedDrawer (
     juce::Graphics& g)
 {
-    auto dim =
-        juce::Rectangle<int> (
-            14,
-            68,
-            getWidth() - 28,
-            418);
-
-    g.setColour (
-        juce::Colours::black.withAlpha (0.76f));
-    g.fillRoundedRectangle (
-        dim.toFloat(),
-        12.0f);
-
-    ui::drawPanel (
+    drawPanel (
         g,
-        learnPopupBounds.toFloat(),
+        advancedBounds,
         true);
 
     g.setColour (
-        ui::accentPurple.withAlpha (0.55f));
-    g.drawRoundedRectangle (
-        learnPopupBounds.toFloat(),
-        14.0f,
-        1.2f);
+        ui::borderSoft.withAlpha (0.72f));
+    g.drawVerticalLine (
+        advancedBounds.getCentreX(),
+        static_cast<float> (
+            advancedBounds.getY() + 48),
+        static_cast<float> (
+            advancedBounds.getBottom() - 18));
 
     const auto& engine =
         processor.getEngine();
 
-    const float progress =
-        juce::jlimit (
-            0.0f,
-            1.0f,
-            engine.getLearningProgress());
+    const auto analysis =
+        engine.getFrameAnalysis();
 
-    auto circle =
-        juce::Rectangle<float> (
-            static_cast<float> (
-                learnPopupBounds.getX() + 25),
-            static_cast<float> (
-                learnPopupBounds.getY() + 82),
-            118.0f,
-            118.0f);
-
-    const auto centre = circle.getCentre();
-    const float radius = 50.0f;
-    const float start =
-        juce::MathConstants<float>::pi * 1.25f;
-    const float end =
-        juce::MathConstants<float>::pi * 2.75f;
-
-    juce::Path baseArc;
-    baseArc.addCentredArc (
-        centre.x,
-        centre.y,
-        radius,
-        radius,
-        0.0f,
-        start,
-        end,
-        true);
-
-    g.setColour (
-        juce::Colour::fromRGB (43, 50, 67));
-    g.strokePath (
-        baseArc,
-        juce::PathStrokeType (
-            8.0f,
-            juce::PathStrokeType::curved,
-            juce::PathStrokeType::rounded));
-
-    juce::Path progressArc;
-    progressArc.addCentredArc (
-        centre.x,
-        centre.y,
-        radius,
-        radius,
-        0.0f,
-        start,
-        start
-            + progress * (end - start),
-        true);
-
-    g.setColour (
-        ui::accentPurple.withAlpha (0.14f));
-    g.strokePath (
-        progressArc,
-        juce::PathStrokeType (
-            14.0f,
-            juce::PathStrokeType::curved,
-            juce::PathStrokeType::rounded));
-
-    g.setGradientFill (
-        ui::accentGradient (circle));
-    g.strokePath (
-        progressArc,
-        juce::PathStrokeType (
-            8.0f,
-            juce::PathStrokeType::curved,
-            juce::PathStrokeType::rounded));
-
-    g.setColour (ui::textPrimary);
-    g.setFont (juce::FontOptions (31.0f));
-
-    juce::String centreText = "3";
-
-    if (engine.isLearning())
-    {
-        centreText =
-            juce::String (
-                juce::roundToInt (
-                    100.0f * progress))
-            + "%";
-    }
-    else if (engine.hasProfile())
-    {
-        centreText = "OK";
-    }
-
-    g.drawText (
-        centreText,
-        circle.toNearestInt(),
-        juce::Justification::centred);
-
-    g.setColour (ui::textSecondary);
-    g.setFont (juce::FontOptions (9.5f));
-    g.drawText (
-        engine.isLearning()
-        ? "capturing"
-        : "seconds",
-        circle.toNearestInt()
-            .translated (0, 34),
-        juce::Justification::centred);
-
-    auto mini =
-        juce::Rectangle<float> (
-            static_cast<float> (
-                learnPopupBounds.getX() + 168),
-            static_cast<float> (
-                learnPopupBounds.getY() + 170),
-            176.0f,
-            32.0f);
-
-    juce::Path trace;
-    for (int i = 0; i < 36; ++i)
-    {
-        const float x =
-            mini.getX()
-            + mini.getWidth()
-                * static_cast<float> (i)
-                / 35.0f;
-
-        const float y =
-            mini.getCentreY()
-            + std::sin (
-                static_cast<float> (i)
-                    * 1.37f)
-                * (3.0f
-                   + 4.0f
-                       * std::sin (
-                           static_cast<float> (i)
-                               * 0.31f));
-
-        if (i == 0)
-            trace.startNewSubPath (x, y);
-        else
-            trace.lineTo (x, y);
-    }
-
-    g.setColour (
-        ui::accentPurple.withAlpha (0.22f));
-    g.strokePath (
-        trace,
-        juce::PathStrokeType (4.0f));
-
-    g.setGradientFill (
-        ui::accentGradient (mini));
-    g.strokePath (
-        trace,
-        juce::PathStrokeType (1.1f));
-}
-
-void SmartDenoiseAudioProcessorEditor::drawAdvancedDrawer (
-    juce::Graphics& g)
-{
-    ui::drawPanel (
-        g,
-        advancedBounds.toFloat(),
-        true);
-
-    auto tabs =
+    auto left =
         juce::Rectangle<int> (
-            advancedBounds.getX() + 12,
-            advancedBounds.getY() + 42,
-            126,
-            advancedBounds.getHeight() - 55);
+            advancedBounds.getX() + 18,
+            advancedBounds.getY() + 47,
+            advancedBounds.getWidth() / 2 - 34,
+            advancedBounds.getHeight() - 63);
 
-    g.setGradientFill (
-        ui::panelGradient (
-            tabs.toFloat(),
-            false));
-    g.fillRoundedRectangle (
-        tabs.toFloat(),
-        8.0f);
-
-    const std::array<juce::String, 4> names {
-        "Processing",
-        "Noise Profile",
-        "P3 Guard",
-        "Output"
-    };
-
-    for (int i = 0; i < 4; ++i)
-    {
-        auto row =
-            juce::Rectangle<int> (
-                tabs.getX() + 6,
-                tabs.getY() + 6 + i * 27,
-                tabs.getWidth() - 12,
-                23);
-
-        if (i == 0)
-        {
-            g.setColour (
-                ui::accentPurple.withAlpha (0.18f));
-            g.fillRoundedRectangle (
-                row.toFloat(),
-                6.0f);
-
-            g.setColour (
-                ui::accentPurple.withAlpha (0.75f));
-            g.fillRoundedRectangle (
-                static_cast<float> (row.getX()),
-                static_cast<float> (row.getY() + 4),
-                2.0f,
-                static_cast<float> (
-                    row.getHeight() - 8),
-                1.0f);
-        }
-
-        g.setColour (
-            i == 0
-            ? ui::textPrimary
-            : ui::textSecondary);
-
-        g.setFont (juce::FontOptions (10.4f));
-        g.drawText (
-            names[static_cast<size_t> (i)],
-            row,
-            juce::Justification::centredLeft);
-    }
-
-    auto content =
-        advancedBounds.reduced (160, 42);
+    auto right =
+        juce::Rectangle<int> (
+            advancedBounds.getCentreX() + 18,
+            advancedBounds.getY() + 47,
+            advancedBounds.getWidth() / 2 - 36,
+            advancedBounds.getHeight() - 63);
 
     g.setColour (ui::textSecondary);
-    g.setFont (juce::FontOptions (9.5f));
-
+    g.setFont (
+        juce::FontOptions (9.2f));
     g.drawText (
-        "MAX REDUCTION",
-        content.getX(),
-        content.getY() + 7,
-        120,
-        18,
+        "PROCESSING",
+        left.removeFromTop (18),
+        juce::Justification::centredLeft);
+
+    left.removeFromTop (43);
+
+    g.setColour (ui::textMuted);
+    g.setFont (
+        juce::FontOptions (8.6f));
+    g.drawText (
+        "Max Reduction",
+        left.removeFromTop (18),
         juce::Justification::centredLeft);
 
     g.setColour (ui::textPrimary);
-    g.setFont (juce::FontOptions (11.0f));
+    g.setFont (
+        juce::FontOptions (10.2f));
     g.drawText (
         "24.0 dB",
-        content.getX() + 122,
-        content.getY() + 7,
-        80,
-        18,
+        left.removeFromTop (18),
         juce::Justification::centredLeft);
 
     g.setColour (ui::textSecondary);
-    g.setFont (juce::FontOptions (9.5f));
+    g.setFont (
+        juce::FontOptions (9.2f));
     g.drawText (
-        "FROZEN PROFILE",
-        content.getX() + 350,
-        content.getY() + 7,
-        115,
-        18,
+        "NOISE PROFILE",
+        right.removeFromTop (18),
         juce::Justification::centredLeft);
 
     g.setColour (
-        processor.getEngine().hasProfile()
-        ? ui::accentCyan
-        : ui::textSecondary);
+        engine.hasProfile()
+            ? ui::accentCyan
+            : ui::textMuted);
+
+    g.setFont (
+        juce::FontOptions (11.0f));
 
     g.drawText (
-        processor.getEngine().hasProfile()
-        ? "LOCKED"
-        : "NOT LEARNED",
-        content.getX() + 468,
-        content.getY() + 7,
-        90,
-        18,
+        engine.hasProfile()
+            ? "FROZEN / LOCKED"
+            : "NOT LEARNED",
+        right.removeFromTop (26),
         juce::Justification::centredLeft);
 
-    const auto analysis =
-        processor.getEngine().getFrameAnalysis();
+    g.setColour (ui::textMuted);
+    g.setFont (
+        juce::FontOptions (8.6f));
 
-    auto detailBar =
-        juce::Rectangle<float> (
-            static_cast<float> (
-                content.getX() + 350),
-            static_cast<float> (
-                content.getY() + 55),
-            180.0f,
-            5.0f);
-
-    g.setColour (
-        juce::Colour::fromRGB (41, 48, 64));
-    g.fillRoundedRectangle (
-        detailBar,
-        2.5f);
-
-    auto detailFill = detailBar;
-    detailFill.setWidth (
-        detailBar.getWidth()
-        * juce::jlimit (
-            0.0f,
-            1.0f,
-            analysis.detailProtection));
-
-    g.setGradientFill (
-        ui::accentGradient (detailBar));
-    g.fillRoundedRectangle (
-        detailFill,
-        2.5f);
-
-    g.setColour (ui::textSecondary);
-    g.setFont (juce::FontOptions (9.3f));
     g.drawText (
-        "P3 detail / tail protection is automatic and profile-safe.",
-        content.getX() + 350,
-        content.getY() + 66,
-        310,
-        20,
+        "Explicit Learn stays frozen until re-learn.",
+        right.removeFromTop (22),
+        juce::Justification::centredLeft);
+
+    auto detailArea =
+        right.removeFromTop (30);
+    drawTelemetry (
+        g,
+        detailArea,
+        "DETAIL GUARD",
+        analysis.detailProtection);
+
+    auto tailArea =
+        right.removeFromTop (30);
+    drawTelemetry (
+        g,
+        tailArea,
+        "TAIL PROTECT",
+        analysis.tailProtection);
+
+    g.setColour (ui::textMuted);
+    g.setFont (
+        juce::FontOptions (8.6f));
+    g.drawText (
+        "Latency  "
+        + juce::String (
+            engine.getLatencySamples())
+        + " samples",
+        right.removeFromTop (22),
         juce::Justification::centredLeft);
 }
 
-void SmartDenoiseAudioProcessorEditor::drawMeter (
+void SmartDenoiseAudioProcessorEditor::
+drawTelemetry (
+    juce::Graphics& g,
+    juce::Rectangle<int> area,
+    const juce::String& label,
+    float value01)
+{
+    const float value =
+        ui::clamp01 (value01);
+
+    auto top =
+        area.removeFromTop (14);
+
+    g.setColour (ui::textMuted);
+    g.setFont (
+        juce::FontOptions (8.2f));
+    g.drawText (
+        label,
+        top.removeFromLeft (
+            top.getWidth() - 37),
+        juce::Justification::centredLeft);
+
+    g.setColour (
+        value > 0.02f
+            ? ui::accentCyan
+            : ui::textMuted);
+
+    g.drawText (
+        juce::String (
+            juce::roundToInt (
+                value * 100.0f))
+        + "%",
+        top,
+        juce::Justification::centredRight);
+
+    auto bar =
+        area.removeFromTop (4)
+            .toFloat();
+
+    g.setColour (ui::borderSoft);
+    g.fillRoundedRectangle (
+        bar,
+        2.0f);
+
+    auto fill = bar;
+    fill.setWidth (
+        bar.getWidth() * value);
+
+    g.setGradientFill (
+        ui::accentGradient (bar));
+    g.fillRoundedRectangle (
+        fill,
+        2.0f);
+}
+
+void SmartDenoiseAudioProcessorEditor::
+drawMeter (
     juce::Graphics& g,
     juce::Rectangle<float> bounds,
     float valueDb,
@@ -2254,37 +1994,44 @@ void SmartDenoiseAudioProcessorEditor::drawMeter (
             valueDb);
 
     const float norm =
-        (clamped + 60.0f) / 60.0f;
+        (clamped + 60.0f)
+        / 60.0f;
 
-    g.setColour (ui::textSecondary);
-    g.setFont (juce::FontOptions (9.0f));
+    g.setColour (ui::textMuted);
+    g.setFont (
+        juce::FontOptions (8.2f));
 
     g.drawText (
         label,
         juce::Rectangle<int> (
             static_cast<int> (
-                bounds.getX() - 8.0f),
+                bounds.getX() - 9.0f),
             static_cast<int> (
-                bounds.getY() - 24.0f),
+                bounds.getY() - 21.0f),
             30,
-            17),
+            16),
         juce::Justification::centred);
 
     constexpr int segments = 20;
     const float gap = 2.0f;
+
     const float segmentHeight =
         (bounds.getHeight()
          - gap
              * static_cast<float> (
                  segments - 1))
-        / static_cast<float> (segments);
+        / static_cast<float> (
+            segments);
 
     const int lit =
         juce::roundToInt (
             norm
-            * static_cast<float> (segments));
+            * static_cast<float> (
+                segments));
 
-    for (int i = 0; i < segments; ++i)
+    for (int i = 0;
+         i < segments;
+         ++i)
     {
         const float y =
             bounds.getBottom()
@@ -2299,262 +2046,233 @@ void SmartDenoiseAudioProcessorEditor::drawMeter (
                 bounds.getWidth(),
                 segmentHeight);
 
-        if (i < lit)
-        {
-            const float position =
-                static_cast<float> (i)
-                / static_cast<float> (
-                    segments - 1);
-
-            auto colour =
-                ui::accentBlue
+        g.setColour (
+            i < lit
+                ? ui::accentBlue
                     .interpolatedWith (
                         ui::accentPurple,
-                        position);
-
-            g.setColour (
-                colour.withAlpha (0.18f));
-            g.fillRoundedRectangle (
-                segment.expanded (2.0f, 1.0f),
-                2.0f);
-
-            g.setColour (colour);
-        }
-        else
-        {
-            g.setColour (
-                juce::Colour::fromRGB (
-                    31, 38, 51));
-        }
+                        static_cast<float> (i)
+                        / static_cast<float> (
+                            segments - 1))
+                : ui::borderSoft);
 
         g.fillRoundedRectangle (
             segment,
-            1.6f);
+            1.5f);
     }
 
-    g.setColour (ui::textMuted);
-    g.setFont (juce::FontOptions (7.6f));
-
-    const std::array<int, 5> ticks {
+    const std::array<int, 5> tickValues {
         0, -12, -24, -36, -60
     };
 
-    for (const int db : ticks)
+    if (label == "IN")
     {
-        const float p =
-            static_cast<float> (-db) / 60.0f;
-
-        const int ty =
-            static_cast<int> (
-                bounds.getY()
-                + p * bounds.getHeight()
-                - 6.0f);
-
-        if (label == "IN")
+        for (const int tick : tickValues)
         {
+            const float t =
+                static_cast<float> (
+                    tick + 60)
+                / 60.0f;
+
+            const float y =
+                bounds.getBottom()
+                - t * bounds.getHeight();
+
+            g.setColour (
+                ui::textMuted.withAlpha (0.75f));
+            g.setFont (
+                juce::FontOptions (6.8f));
+
             g.drawText (
-                juce::String (db),
-                static_cast<int> (
-                    bounds.getX() - 25.0f),
-                ty,
-                19,
-                12,
+                juce::String (tick),
+                juce::Rectangle<int> (
+                    static_cast<int> (
+                        bounds.getX() - 24.0f),
+                    static_cast<int> (
+                        y - 6.0f),
+                    19,
+                    12),
                 juce::Justification::centredRight);
         }
     }
 
     g.setColour (ui::textSecondary);
-    g.setFont (juce::FontOptions (8.5f));
+    g.setFont (
+        juce::FontOptions (8.0f));
 
     g.drawText (
         juce::String (valueDb, 1),
         juce::Rectangle<int> (
             static_cast<int> (
-                bounds.getX() - 14.0f),
+                bounds.getX() - 13.0f),
             static_cast<int> (
                 bounds.getBottom() + 5.0f),
-            44,
-            16),
+            37,
+            15),
         juce::Justification::centred);
 }
 
 void SmartDenoiseAudioProcessorEditor::resized()
 {
-    title.setBounds (
-        62, 18, 232, 34);
-
-    abButton.setBounds (
-        705, 22, 55, 28);
-    undoButton.setBounds (
-        764, 22, 48, 28);
-    redoButton.setBounds (
-        814, 22, 48, 28);
-    helpButton.setBounds (
-        869, 22, 36, 28);
+    headerBounds =
+        { 15, 11, 910, 54 };
 
     captureBounds =
-        { 14, 76, 220, 330 };
+        { 15, 77, 218, 330 };
+
     cleanBounds =
-        { 242, 76, 468, 330 };
+        { 245, 77, 456, 330 };
+
     checkBounds =
-        { 718, 76, 208, 330 };
+        { 713, 77, 212, 330 };
 
     activityBounds =
-        { 14, 414, 912, 70 };
+        { 15, 419, 910, 61 };
+
     footerBounds =
-        { 14, 492, 912, 36 };
+        { 15, 492, 910, 34 };
+
+    title.setBounds (
+        headerBounds.getX() + 51,
+        headerBounds.getY() + 8,
+        228,
+        37);
+
+    abButton.setBounds (
+        headerBounds.getRight() - 219,
+        headerBounds.getY() + 12,
+        52,
+        29);
+
+    undoButton.setBounds (
+        headerBounds.getRight() - 162,
+        headerBounds.getY() + 12,
+        44,
+        29);
+
+    redoButton.setBounds (
+        headerBounds.getRight() - 115,
+        headerBounds.getY() + 12,
+        44,
+        29);
+
+    helpButton.setBounds (
+        headerBounds.getRight() - 63,
+        headerBounds.getY() + 12,
+        30,
+        29);
 
     learn.setBounds (
-        captureBounds.getX() + 31,
-        captureBounds.getY() + 55,
-        captureBounds.getWidth() - 62,
-        132);
+        captureBounds.getX() + 37,
+        captureBounds.getY() + 50,
+        144,
+        144);
 
     profileName.setBounds (
-        captureBounds.getX() + 42,
-        captureBounds.getY() + 200,
-        captureBounds.getWidth() - 78,
-        28);
+        captureBounds.getX() + 45,
+        captureBounds.getY() + 236,
+        captureBounds.getWidth() - 82,
+        26);
 
     profileStatus.setBounds (
-        captureBounds.getX() + 18,
-        captureBounds.getY() + 277,
-        captureBounds.getWidth() - 36,
-        34);
+        captureBounds.getX() + 20,
+        captureBounds.getY() + 308,
+        captureBounds.getWidth() - 40,
+        18);
 
     reductionLabel.setBounds (
-        cleanBounds.getX() + 42,
-        cleanBounds.getY() + 48,
-        238,
-        24);
+        cleanBounds.getX() + 25,
+        cleanBounds.getY() + 51,
+        260,
+        20);
 
     reduction.setBounds (
-        cleanBounds.getX() + 18,
+        cleanBounds.getX() + 17,
         cleanBounds.getY() + 67,
-        282,
-        238);
+        276,
+        246);
 
     preserveLabel.setBounds (
-        cleanBounds.getX() + 312,
-        cleanBounds.getY() + 53,
-        136,
-        20);
+        cleanBounds.getX() + 315,
+        cleanBounds.getY() + 54,
+        122,
+        18);
 
     preserve.setBounds (
-        cleanBounds.getX() + 321,
-        cleanBounds.getY() + 74,
-        118,
-        112);
+        cleanBounds.getX() + 320,
+        cleanBounds.getY() + 73,
+        112,
+        106);
 
     silenceLabel.setBounds (
-        cleanBounds.getX() + 312,
-        cleanBounds.getY() + 189,
-        136,
-        20);
+        cleanBounds.getX() + 315,
+        cleanBounds.getY() + 190,
+        122,
+        18);
 
     silence.setBounds (
-        cleanBounds.getX() + 321,
-        cleanBounds.getY() + 210,
-        118,
-        108);
+        cleanBounds.getX() + 320,
+        cleanBounds.getY() + 209,
+        112,
+        103);
 
     hearRemoved.setBounds (
         checkBounds.getX() + 14,
-        checkBounds.getY() + 71,
-        116,
-        72);
+        checkBounds.getY() + 61,
+        111,
+        77);
 
     bypass.setBounds (
         checkBounds.getX() + 14,
-        checkBounds.getY() + 154,
-        116,
-        68);
+        checkBounds.getY() + 149,
+        111,
+        70);
 
     advanced.setBounds (
         footerBounds.getX() + 8,
         footerBounds.getY() + 4,
         108,
-        28);
+        26);
 
     quality.setBounds (
-        footerBounds.getCentreX() - 70,
+        footerBounds.getCentreX() - 60,
         footerBounds.getY() + 4,
-        188,
-        28);
-
-    learnPopupBounds =
-        juce::Rectangle<int> (
-            getWidth() / 2 - 190,
-            128,
-            380,
-            282);
-
-    learnPopupTitle.setBounds (
-        learnPopupBounds.getX() + 18,
-        learnPopupBounds.getY() + 12,
-        learnPopupBounds.getWidth() - 36,
-        28);
-
-    learnPopupInstruction.setBounds (
-        learnPopupBounds.getX() + 168,
-        learnPopupBounds.getY() + 81,
         190,
-        80);
-
-    learnPopupStatus.setBounds (
-        learnPopupBounds.getX() + 168,
-        learnPopupBounds.getY() + 208,
-        190,
-        32);
-
-    learnPopupClose.setBounds (
-        learnPopupBounds.getRight() - 105,
-        learnPopupBounds.getBottom() - 42,
-        82,
         26);
 
     if (advancedDrawerVisible)
     {
         advancedBounds =
-            juce::Rectangle<int> (
-                14,
-                542,
-                912,
-                145);
+            { 15, 538, 910, 146 };
 
         advancedTitle.setBounds (
-            advancedBounds.getX() + 14,
-            advancedBounds.getY() + 8,
-            120,
-            26);
+            advancedBounds.getX() + 18,
+            advancedBounds.getY() + 9,
+            140,
+            27);
 
         advancedClose.setBounds (
-            advancedBounds.getRight() - 84,
-            advancedBounds.getY() + 8,
+            advancedBounds.getRight() - 82,
+            advancedBounds.getY() + 9,
             66,
-            24);
+            25);
 
         profileOffsetLabel.setBounds (
-            advancedBounds.getX() + 162,
-            advancedBounds.getY() + 48,
-            116,
-            24);
+            advancedBounds.getX() + 21,
+            advancedBounds.getY() + 69,
+            102,
+            23);
 
         profileOffset.setBounds (
-            advancedBounds.getX() + 276,
-            advancedBounds.getY() + 46,
-            235,
-            28);
-
-        advancedStatus.setBounds (
-            advancedBounds.getX() + 162,
-            advancedBounds.getY() + 93,
-            advancedBounds.getWidth() - 188,
-            28);
+            advancedBounds.getX() + 125,
+            advancedBounds.getY() + 67,
+            286,
+            27);
     }
 }
 
-void SmartDenoiseAudioProcessorEditor::timerCallback()
+void SmartDenoiseAudioProcessorEditor::
+timerCallback()
 {
     const float currentInput =
         processor.getInputPeakDb();
@@ -2564,17 +2282,17 @@ void SmartDenoiseAudioProcessorEditor::timerCallback()
 
     displayedInputDb =
         currentInput > displayedInputDb
-        ? currentInput
-        : juce::jmax (
-              -72.0f,
-              displayedInputDb - 1.8f);
+            ? currentInput
+            : juce::jmax (
+                  -72.0f,
+                  displayedInputDb - 1.8f);
 
     displayedOutputDb =
         currentOutput > displayedOutputDb
-        ? currentOutput
-        : juce::jmax (
-              -72.0f,
-              displayedOutputDb - 1.8f);
+            ? currentOutput
+            : juce::jmax (
+                  -72.0f,
+                  displayedOutputDb - 1.8f);
 
     std::move (
         inputHistory.begin() + 1,
@@ -2588,73 +2306,50 @@ void SmartDenoiseAudioProcessorEditor::timerCallback()
 
     inputHistory.back() =
         displayedInputDb;
+
     outputHistory.back() =
         displayedOutputDb;
 
-    auto& engine = processor.getEngine();
+    auto& engine =
+        processor.getEngine();
+
+    learn.setLearnState (
+        engine.isLearning(),
+        engine.getLearningProgress(),
+        engine.hasProfile(),
+        engine.wasLastLearnRejected());
 
     juce::String profileText;
 
     if (engine.isLearning())
     {
-        const int progress =
-            juce::roundToInt (
-                engine.getLearningProgress()
-                * 100.0f);
-
         profileText =
-            "Learning "
-            + juce::String (progress)
+            "Learning  "
+            + juce::String (
+                juce::roundToInt (
+                    engine.getLearningProgress()
+                    * 100.0f))
             + "%";
-
-        learn.setButtonText (
-            "Learning...\n"
-            + juce::String (progress)
-            + "%");
-
-        learnPopupStatus.setText (
-            "Capturing profile... "
-            + juce::String (progress)
-            + "%",
-            juce::dontSendNotification);
     }
     else if (engine.wasLastLearnRejected())
     {
         profileText =
             engine.hasProfile()
-            ? "Learn rejected | previous profile kept"
-            : "Learn rejected | retry with noise only";
-
-        learn.setButtonText (
-            "Re-learn Noise\n3s");
-
-        learnPopupStatus.setText (
-            profileText,
-            juce::dontSendNotification);
+                ? "Learn rejected - previous profile kept"
+                : "Learn rejected - capture noise only";
     }
     else if (engine.hasProfile())
     {
-        const int qualityPercent =
-            juce::roundToInt (
-                engine.getProfileQuality()
-                * 100.0f);
-
         profileText =
-            "Profile Health "
-            + juce::String (qualityPercent)
-            + "% | Frozen";
+            "Frozen profile  "
+            + juce::String (
+                juce::roundToInt (
+                    engine.getProfileQuality()
+                    * 100.0f))
+            + "%";
 
         profileName.setText (
             "Frozen Noise Profile",
-            juce::dontSendNotification);
-
-        learn.setButtonText (
-            "Re-learn Noise\n3s");
-
-        learnPopupStatus.setText (
-            "Profile locked at "
-            + juce::String (qualityPercent)
-            + "% quality",
             juce::dontSendNotification);
     }
     else
@@ -2663,39 +2358,12 @@ void SmartDenoiseAudioProcessorEditor::timerCallback()
             "No profile - learn room noise";
 
         profileName.setText (
-            "Studio Noise",
-            juce::dontSendNotification);
-
-        learn.setButtonText (
-            "Learn Noise\n3s");
-
-        learnPopupStatus.setText (
-            "Waiting for a valid profile",
+            "Noise Profile",
             juce::dontSendNotification);
     }
 
     profileStatus.setText (
         profileText,
-        juce::dontSendNotification);
-
-    const auto analysis =
-        engine.getFrameAnalysis();
-
-    advancedStatus.setText (
-        "Detail Guard "
-        + juce::String (
-            juce::roundToInt (
-                analysis.detailProtection
-                * 100.0f))
-        + "%   |   Tail Protect "
-        + juce::String (
-            juce::roundToInt (
-                analysis.tailProtection
-                * 100.0f))
-        + "%   |   Latency "
-        + juce::String (
-            engine.getLatencySamples())
-        + " samples",
         juce::dontSendNotification);
 
     syncBypassButton();
