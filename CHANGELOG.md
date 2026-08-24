@@ -15,6 +15,10 @@
 - P4.6 removes the translucent sheen-band artifact from every knob, moves 3D depth to the perimeter edge only, and makes Learn Noise visibly clickable with a raised circular rim, drop shadow, hover highlight and pressed-depth treatment.
 - P5 removes deceptive A/B/Undo/Redo/Help chrome, removes the false profile dropdown affordance, adds professional tooltips and double-click resets, replaces redundant input/output history with real spectral-reduction activity, and compresses Advanced into one real control plus concise profile diagnostics.
 - P5.1 gives the Advanced drawer collision-safe vertical space and compresses DSP ceiling copy into one line so all real diagnostics remain visible without overlapping.
+- P5.2 adds a real Captured Profile Bank to the header. Every accepted Learn can create a timestamped snapshot containing the frozen noise profile plus Reduction, Preserve, Silence and Profile Offset, and compatible snapshots can be restored from the dropdown.
+- P5.2 replaces the passive profile badge/health treatment with an explicit Empty → Capturing → Active workflow and a real 48-band spectral fingerprint generated from the learned profile itself.
+- P5.2 removes failure-oriented `Try Again` language: a rejected Learn with an existing profile clearly reports that denoise remains active on the previous frozen profile, while an empty state guides the user to capture a noise-only moment.
+- P5.2 fixes the Bypass glyph to use true 1:1 circular geometry rather than inheriting the rectangular icon area.
 - Preserve Detail and Silence Clean-up use the same visual family and display percentages instead of raw 0..1 values.
 - Improved typography hierarchy, disciplined spacing, panel depth, inner highlights and restrained graphite/navy surfaces.
 - Upgraded segmented input/output meters with scale ticks, glow and cleaner readouts.
@@ -23,16 +27,18 @@
 - Simplified the Advanced drawer into a disciplined two-column layout using real controls/telemetry only.
 
 ### Product safety
-- No DSP algorithm or parameter ID changes.
+- No DSP suppression algorithm or existing parameter ID changes.
 - Frozen Learn Noise profile remains the authority.
 - P3 Detail Guard / Tail Protect remain telemetry/protection intelligence only.
-- No mutex, file I/O or dynamic container was added to the audio callback.
+- P5.2 profile-bank file I/O runs from UI/message-thread operations only; no mutex, file I/O or dynamic container was added to the audio callback.
+- Captured profiles are filtered by analysis quality so a frozen 1024-bin profile is not silently loaded onto an incompatible 2048 FFT grid, or vice versa.
 
 ### Validation / delivery
 - P4.6 visual contract explicitly rejects translucent knob overlays, requires perimeter-only 3D knob edges with a flat machined face, and requires Learn Noise to render as a raised clickable circular button.
 - P4.6 syntax scope was restored after the first MSVC pass exposed a missing brace in the machining clip block; final validation is run from a normal user commit.
-- CI continues to require P0-P3 QA, native Windows build, C++ black-box tests, runtime standalone screenshot smoke and pluginval strictness 5.
-- Release workflow repeats Concept C + P4 gates before public publishing.
+- P5.2 adds a dedicated profile-workflow contract plus native black-box checks that both a learned profile and a restored profile publish a non-empty spectral fingerprint.
+- CI requires P0-P5.2 QA, native Windows build, C++ black-box tests, mandatory clean 940×540 runtime plugin screenshot and pluginval strictness 5.
+- Release workflow repeats Concept C + P4 + P5 + P5.2 gates before public publishing.
 - Target public release: v0.4.0.
 
 ## 0.3.0 - release candidate
