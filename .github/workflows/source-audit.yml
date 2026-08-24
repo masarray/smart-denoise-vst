@@ -42,6 +42,9 @@ jobs:
       - name: Validate P4 visual fidelity contract
         run: python qa/verify_p4_visual_fidelity.py
 
+      - name: Validate P5 UX integrity contract
+        run: python qa/verify_p5_ux_integrity.py
+
   windows-build:
     name: Windows VST3 + Standalone + pluginval
     needs: source-audit
@@ -83,7 +86,7 @@ jobs:
           Write-Host "VST3: $($vst.FullName)"
           Write-Host "Standalone: $($standalone.FullName)"
 
-      - name: Capture P4 standalone visual smoke
+      - name: Capture P5 standalone visual smoke
         id: ui_capture
         continue-on-error: true
         shell: pwsh
@@ -129,7 +132,7 @@ jobs:
             try {
               $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)
               $bitmap.Save(
-                "$PWD/ui-snapshot/Smart-Denoise-P4-runtime.png",
+                "$PWD/ui-snapshot/Smart-Denoise-P5-runtime.png",
                 [System.Drawing.Imaging.ImageFormat]::Png
               )
             } finally {
