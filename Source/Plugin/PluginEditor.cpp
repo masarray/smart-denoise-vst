@@ -90,44 +90,69 @@ void drawHeadphones (
     juce::Rectangle<float> area,
     juce::Colour colour)
 {
+    auto bounds = area.reduced (3.0f, 2.0f);
+
+    const float leftX = bounds.getX() + bounds.getWidth() * 0.22f;
+    const float rightX = bounds.getRight() - bounds.getWidth() * 0.22f;
+    const float topY = bounds.getY() + bounds.getHeight() * 0.08f;
+    const float cupTop = bounds.getY() + bounds.getHeight() * 0.51f;
+    const float cupW = bounds.getWidth() * 0.19f;
+    const float cupH = bounds.getHeight() * 0.38f;
+
+    // One continuous, unmistakable headphone headband silhouette.
+    juce::Path headband;
+    headband.startNewSubPath (leftX, cupTop + 2.0f);
+    headband.cubicTo (
+        leftX,
+        topY,
+        rightX,
+        topY,
+        rightX,
+        cupTop + 2.0f);
+
     g.setColour (colour);
-
-    auto arcArea = area.reduced (5.0f, 4.0f);
-    juce::Path arc;
-    arc.addCentredArc (
-        arcArea.getCentreX(),
-        arcArea.getCentreY() + 3.0f,
-        arcArea.getWidth() * 0.36f,
-        arcArea.getHeight() * 0.40f,
-        0.0f,
-        juce::MathConstants<float>::pi * 1.10f,
-        juce::MathConstants<float>::pi * 1.90f,
-        true);
-
     g.strokePath (
-        arc,
+        headband,
         juce::PathStrokeType (
-            2.0f,
+            2.6f,
             juce::PathStrokeType::curved,
             juce::PathStrokeType::rounded));
 
-    const float earW = area.getWidth() * 0.16f;
-    const float earH = area.getHeight() * 0.30f;
-    const float earY = area.getCentreY() + area.getHeight() * 0.02f;
+    // Short stems make the headband read cleanly into the two ear cups.
+    g.drawLine (
+        leftX,
+        cupTop - 1.0f,
+        leftX,
+        cupTop + 4.0f,
+        2.4f);
+    g.drawLine (
+        rightX,
+        cupTop - 1.0f,
+        rightX,
+        cupTop + 4.0f,
+        2.4f);
 
-    g.fillRoundedRectangle (
-        area.getX() + area.getWidth() * 0.18f,
-        earY,
-        earW,
-        earH,
-        earW * 0.45f);
+    auto leftCup = juce::Rectangle<float> (
+        cupW,
+        cupH)
+        .withCentre ({ leftX, cupTop + cupH * 0.45f });
 
+    auto rightCup = juce::Rectangle<float> (
+        cupW,
+        cupH)
+        .withCentre ({ rightX, cupTop + cupH * 0.45f });
+
+    g.fillRoundedRectangle (leftCup, cupW * 0.46f);
+    g.fillRoundedRectangle (rightCup, cupW * 0.46f);
+
+    // Inner pads preserve the familiar over-ear headphone negative space.
+    g.setColour (ui::panelDeep.withAlpha (0.92f));
     g.fillRoundedRectangle (
-        area.getRight() - area.getWidth() * 0.18f - earW,
-        earY,
-        earW,
-        earH,
-        earW * 0.45f);
+        leftCup.reduced (cupW * 0.34f, cupH * 0.20f),
+        cupW * 0.28f);
+    g.fillRoundedRectangle (
+        rightCup.reduced (cupW * 0.34f, cupH * 0.20f),
+        cupW * 0.28f);
 }
 
 void drawBypass (
@@ -203,7 +228,7 @@ void LearnCircleButton::paintButton (
     bool isButtonDown)
 {
     auto area =
-        getLocalBounds().toFloat().reduced (7.0f);
+        getLocalBounds().toFloat().reduced (5.0f);
 
     const float side =
         juce::jmin (area.getWidth(), area.getHeight());
@@ -212,60 +237,45 @@ void LearnCircleButton::paintButton (
         juce::Rectangle<float> (side, side)
             .withCentre (area.getCentre());
 
+    // P4.2: the Learn control is deliberately a true 360-degree circle.
+    // The outer ring is the progress authority, not a rotary-knob arc.
+    auto ringBounds = circle.reduced (4.0f);
+    auto faceCircle = circle.reduced (15.0f);
     const auto centre = circle.getCentre();
-    const float radius = side * 0.46f;
-    const float start =
-        juce::MathConstants<float>::pi * 1.25f;
-    const float end =
-        juce::MathConstants<float>::pi * 2.75f;
+    const float startAngle =
+        -0.5f * juce::MathConstants<float>::pi;
 
     if (learning || isMouseOverButton)
     {
-        for (int i = 4; i >= 1; --i)
+        for (int i = 5; i >= 1; --i)
         {
             g.setColour (
                 ui::accentPurple.withAlpha (
-                    0.025f * static_cast<float> (5 - i)));
-
+                    0.018f * static_cast<float> (6 - i)));
             g.drawEllipse (
-                circle.expanded (
-                    static_cast<float> (i) * 2.0f),
-                static_cast<float> (i) * 1.5f);
+                ringBounds.expanded (
+                    static_cast<float> (i) * 2.1f),
+                1.4f + static_cast<float> (i) * 1.25f);
         }
     }
 
     juce::ColourGradient face (
         ui::panelRaised.brighter (
             isMouseOverButton ? 0.08f : 0.03f),
-        circle.getTopLeft(),
+        faceCircle.getTopLeft(),
         ui::panelDeep,
-        circle.getBottomRight(),
+        faceCircle.getBottomRight(),
         false);
 
     g.setGradientFill (face);
-    g.fillEllipse (circle);
+    g.fillEllipse (faceCircle);
 
     g.setColour (ui::borderSoft);
-    g.drawEllipse (circle, 1.0f);
+    g.drawEllipse (faceCircle, 1.0f);
 
-    juce::Path baseArc;
-    baseArc.addCentredArc (
-        centre.x,
-        centre.y,
-        radius,
-        radius,
-        0.0f,
-        start,
-        end,
-        true);
-
+    // Full 360-degree idle track. This remains visible before learning.
     g.setColour (juce::Colour::fromRGB (45, 52, 70));
-    g.strokePath (
-        baseArc,
-        juce::PathStrokeType (
-            7.0f,
-            juce::PathStrokeType::curved,
-            juce::PathStrokeType::rounded));
+    g.drawEllipse (ringBounds, 7.0f);
 
     float ringProgress = 0.0f;
     if (learning)
@@ -275,41 +285,51 @@ void LearnCircleButton::paintButton (
 
     if (ringProgress > 0.001f)
     {
-        juce::Path progressArc;
-        progressArc.addCentredArc (
-            centre.x,
-            centre.y,
-            radius,
-            radius,
-            0.0f,
-            start,
-            start + ringProgress * (end - start),
-            true);
+        if (ringProgress >= 0.999f)
+        {
+            // drawEllipse guarantees a visually closed ring at 100%.
+            g.setColour (ui::accentPurple.withAlpha (0.16f));
+            g.drawEllipse (ringBounds, 17.0f);
+            g.setGradientFill (ui::accentGradient (ringBounds));
+            g.drawEllipse (ringBounds, 7.5f);
+        }
+        else
+        {
+            juce::Path progressArc;
+            progressArc.addCentredArc (
+                centre.x,
+                centre.y,
+                ringBounds.getWidth() * 0.5f,
+                ringBounds.getHeight() * 0.5f,
+                0.0f,
+                startAngle,
+                startAngle
+                    + ringProgress
+                      * juce::MathConstants<float>::twoPi,
+                true);
 
-        g.setColour (
-            ui::accentPurple.withAlpha (0.18f));
-        g.strokePath (
-            progressArc,
-            juce::PathStrokeType (
-                15.0f,
-                juce::PathStrokeType::curved,
-                juce::PathStrokeType::rounded));
+            g.setColour (ui::accentPurple.withAlpha (0.16f));
+            g.strokePath (
+                progressArc,
+                juce::PathStrokeType (
+                    17.0f,
+                    juce::PathStrokeType::curved,
+                    juce::PathStrokeType::rounded));
 
-        g.setGradientFill (
-            ui::accentGradient (circle));
-        g.strokePath (
-            progressArc,
-            juce::PathStrokeType (
-                7.0f,
-                juce::PathStrokeType::curved,
-                juce::PathStrokeType::rounded));
+            g.setGradientFill (ui::accentGradient (ringBounds));
+            g.strokePath (
+                progressArc,
+                juce::PathStrokeType (
+                    7.5f,
+                    juce::PathStrokeType::curved,
+                    juce::PathStrokeType::rounded));
+        }
     }
 
     if (isButtonDown)
     {
-        g.setColour (
-            juce::Colours::white.withAlpha (0.04f));
-        g.fillEllipse (circle.reduced (3.0f));
+        g.setColour (juce::Colours::white.withAlpha (0.04f));
+        g.fillEllipse (faceCircle.reduced (3.0f));
     }
 
     auto iconArea =
@@ -359,9 +379,9 @@ void LearnCircleButton::paintButton (
     g.drawFittedText (
         mainText,
         juce::Rectangle<int> (
-            static_cast<int> (circle.getX() + 14.0f),
+            static_cast<int> (faceCircle.getX() + 12.0f),
             static_cast<int> (centre.y - 5.0f),
-            static_cast<int> (circle.getWidth() - 28.0f),
+            static_cast<int> (faceCircle.getWidth() - 24.0f),
             30),
         juce::Justification::centred,
         1);
@@ -372,9 +392,9 @@ void LearnCircleButton::paintButton (
     g.drawFittedText (
         subText,
         juce::Rectangle<int> (
-            static_cast<int> (circle.getX() + 10.0f),
+            static_cast<int> (faceCircle.getX() + 8.0f),
             static_cast<int> (centre.y + 25.0f),
-            static_cast<int> (circle.getWidth() - 20.0f),
+            static_cast<int> (faceCircle.getWidth() - 16.0f),
             19),
         juce::Justification::centred,
         1);
@@ -434,11 +454,11 @@ void MonitorButton::paintButton (
 
     auto iconArea =
         juce::Rectangle<float> (
-            34.0f,
-            32.0f)
+            38.0f,
+            34.0f)
             .withCentre (
                 { area.getCentreX(),
-                  area.getY() + 25.0f });
+                  area.getY() + 26.0f });
 
     const auto iconColour =
         active

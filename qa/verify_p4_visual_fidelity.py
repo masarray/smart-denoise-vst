@@ -19,6 +19,9 @@ check("Panel renderer with layered depth", "void SmartDenoiseAudioProcessorEdito
 check("Restrained violet-blue accents", "accentPurple" in editor_cpp and "accentBlue" in editor_cpp and "accentGradient" in editor_cpp)
 check("Circular inline learn component", "class LearnCircleButton" in editor_h and ("fillEllipse (circle)" in editor_cpp or "fillEllipse (faceCircle)" in editor_cpp))
 check("Learn progress ring", "ringProgress = progress" in editor_cpp and "progressArc.addCentredArc" in editor_cpp)
+check("P4.2 Learn uses full 360-degree idle track", "g.drawEllipse (ringBounds, 7.0f);" in editor_cpp)
+check("P4.2 Learn progress spans full two-pi", "juce::MathConstants<float>::twoPi" in editor_cpp and "ringProgress >= 0.999f" in editor_cpp)
+check("P4.2 headphone has continuous headband silhouette", "headband.cubicTo" in editor_cpp and "leftCup" in editor_cpp and "rightCup" in editor_cpp)
 check("Learn completes inline without popup", "drawLearnPopup" not in editor_cpp and "showLearnPopup" not in editor_cpp)
 check("Learn profile ready state", '"Profile Ready"' in editor_cpp and '"Click to re-learn"' in editor_cpp)
 check("Learn waveform icon", "drawWaveformIcon" in editor_cpp)
@@ -46,7 +49,7 @@ check("Meter telemetry remains atomic", "std::atomic<float> inputPeakDb" in proc
 
 failed = [name for name, ok in checks if not ok]
 
-print("SMART DENOISE P4.1 CLEAN FOUNDATION CONTRACT")
+print("SMART DENOISE P4.2 VISUAL CORRECTION CONTRACT")
 print("============================================")
 for name, ok in checks:
     print(f"[{'PASS' if ok else 'FAIL'}] {name}")
