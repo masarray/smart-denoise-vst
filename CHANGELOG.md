@@ -7,6 +7,8 @@
 - Replaced the old Learn card/popup workflow with a circular inline Learn control; no modal popup interrupts the capture flow.
 - P4.2 makes the Learn progress authority a true 360-degree outer ring: the idle track is a full circle, capture progress can span the full two-pi circumference, and the 100% state is explicitly rendered as a closed ring.
 - P4.2 redraws Hear Removed with a continuous over-ear headphone headband, stems and two padded ear cups so the icon remains recognizable at compact VST sizes.
+- P4.3 upgrades all rotary controls to a premium dimensional material system: recessed illuminated track, lower physical shadow, machined metallic bezel, inner bevel, radial convex glass face, restrained specular reflection and a layered luminous value marker.
+- P4.3 preserves the existing knob geometry and parameter mapping, so the added depth does not reopen layout collision or automation compatibility risks.
 - Upgraded the primary Reduce Noise macro with a thicker gradient arc, glow pass, radial inner disc, visual ticks, white marker and explicit percentage readout.
 - Preserve Detail and Silence Clean-up use the same visual family and display percentages instead of raw 0..1 values.
 - Improved typography hierarchy, disciplined spacing, panel depth, inner highlights and restrained graphite/navy surfaces.
@@ -22,7 +24,7 @@
 - No mutex, file I/O or dynamic container was added to the audio callback.
 
 ### Validation / delivery
-- Added deterministic P4 visual-fidelity source contract, including P4.2 full-circle Learn and headphone-silhouette assertions.
+- Added deterministic P4 visual-fidelity source contract, including P4.2 full-circle Learn/headphone-silhouette assertions and P4.3 physical-depth/gloss assertions.
 - CI continues to require P0-P3 QA, native Windows build, C++ black-box tests, runtime standalone screenshot smoke and pluginval strictness 5.
 - Release workflow repeats Concept C + P4 gates before public publishing.
 - Target public release: v0.4.0.
