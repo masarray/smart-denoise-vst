@@ -23,13 +23,13 @@ check("Learn popup removed", "LearnPopup" not in editor_h and "drawLearnPopup" n
 check("Frozen profile feedback", '"Frozen profile  "' in editor_cpp and '"Frozen Noise Profile"' in editor_cpp)
 check("Hear Removed monitoring", "MonitorButton hearRemoved" in editor_h and '"hearRemoved"' in editor_cpp)
 check("Host-safe bypass uses existing enabled parameter", 'getParameter ("enabled")' in editor_cpp)
-check("P3 Detail Guard feedback", '"DETAIL GUARD"' in editor_cpp and "analysis.detailProtection" in editor_cpp)
-check("P3 Tail Protect feedback", '"TAIL PROTECT"' in editor_cpp and "analysis.tailProtection" in editor_cpp)
+check("P3 Detail Guard feedback", '"DETAIL GUARD  AUTO"' in editor_cpp and "analysis.detailProtection" in editor_cpp)
+check("P3 Tail Protect feedback", '"TAIL PROTECT  AUTO"' in editor_cpp and "analysis.tailProtection" in editor_cpp)
 check("Input/output meter telemetry", "inputPeakDb" in processor_h and "outputPeakDb" in processor_h)
 check("Meter telemetry is atomic", "std::atomic<float> inputPeakDb" in processor_h and "std::atomic<float> outputPeakDb" in processor_h)
 check("Processor measures before and after DSP", "inputPeakDb.store" in processor_cpp and "outputPeakDb.store" in processor_cpp)
-check("Activity strip", "drawActivityStrip" in editor_cpp and "inputHistory" in editor_h and "outputHistory" in editor_h)
-check("Advanced drawer expands below compact UI", "shouldShow ? 700 : 540" in editor_cpp and "drawAdvancedDrawer" in editor_cpp)
+check("P5 denoise activity strip", "drawActivityStrip" in editor_cpp and "reductionHistory" in editor_h and "spectralReductionDb" in editor_cpp)
+check("Advanced drawer expands below compact UI", "shouldShow ? 660 : 540" in editor_cpp and "drawAdvancedDrawer" in editor_cpp)
 check("Advanced exposes real Profile Offset", '"Profile Offset"' in editor_cpp and '"thresholdOffset"' in editor_cpp and "profileOffset" in editor_cpp)
 check("Quality selector uses existing quality parameter", '"quality"' in editor_cpp and "qualityAttachment" in editor_cpp)
 check("No fake adaptive mode", "Adaptive Mode" not in editor_cpp and "adaptive" not in editor_h.lower())
@@ -37,8 +37,8 @@ check("No mutex introduced in UI telemetry", "mutex" not in processor_h.lower() 
 
 failed = [name for name, ok in checks if not ok]
 
-print("SMART DENOISE CONCEPT C / P4.1 UI CONTRACT")
-print("==========================================")
+print("SMART DENOISE CONCEPT C / P5 UI CONTRACT")
+print("========================================")
 for name, ok in checks:
     print(f"[{'PASS' if ok else 'FAIL'}] {name}")
 
