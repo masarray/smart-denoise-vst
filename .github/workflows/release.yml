@@ -76,6 +76,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python qa/verify_p5_ux_integrity.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python qa/verify_p52_profile_workflow.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Configure
         shell: pwsh
