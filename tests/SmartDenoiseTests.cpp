@@ -166,6 +166,12 @@ void testLearningAndPersistence (TestContext& t)
     t.expect (engine.hasProfile(), "Stationary Learn creates a valid profile");
     t.expect (engine.getProfileQuality() >= 0.25f, "Valid profile passes quality gate");
 
+    const auto learnedFingerprint = engine.getProfileDisplay();
+    t.expect (
+        std::any_of (learnedFingerprint.begin(), learnedFingerprint.end(),
+                    [] (float value) { return value > 0.05f; }),
+        "Learn publishes a non-empty captured-profile fingerprint");
+
     const auto encoded = engine.serialiseProfile();
     t.expect (encoded.isNotEmpty(), "Valid profile serialises");
 
@@ -174,6 +180,11 @@ void testLearningAndPersistence (TestContext& t)
     restored->prepare (sampleRate, blockSize, 2);
     t.expect (restored->restoreProfile (encoded), "Compatible engine restores learned profile");
     t.expect (restored->hasProfile(), "Restored profile becomes active");
+    const auto restoredFingerprint = restored->getProfileDisplay();
+    t.expect (
+        std::any_of (restoredFingerprint.begin(), restoredFingerprint.end(),
+                    [] (float value) { return value > 0.05f; }),
+        "Restored profile republishes its visual fingerprint");
 
     auto incompatible = std::make_unique<smartdenoise::SmartDenoiseEngine>();
     incompatible->setQuality (smartdenoise::SmartDenoiseEngine::Quality::clean2048);

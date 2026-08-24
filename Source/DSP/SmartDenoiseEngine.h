@@ -35,6 +35,7 @@ public:
     static constexpr int detailFftSize = 512;
     static constexpr int detailBins = detailFftSize / 2 + 1;
     static constexpr int detailHopSize = detailFftSize / 2;
+    static constexpr int profileDisplayBins = 48;
     static constexpr float maxReductionDb = 24.0f;
 
     enum class Quality
@@ -77,6 +78,7 @@ public:
     int getRejectedLearningFrames() const noexcept { return learningFramesRejected.load(); }
 
     NoiseFrameAnalysis getFrameAnalysis() const noexcept;
+    std::array<float, profileDisplayBins> getProfileDisplay() const noexcept;
 
     juce::String serialiseProfile() const;
     bool restoreProfile (const juce::String& encodedState);
@@ -125,6 +127,7 @@ private:
     void clearFrameAnalysis() noexcept;
     void resetSpectralState() noexcept;
     void invalidateProfile() noexcept;
+    void publishProfileDisplay() noexcept;
 
     float frequencyWeight (int bin) const noexcept;
     float detectorFrequencyWeight (int bin) const noexcept;
@@ -158,6 +161,7 @@ private:
     std::array<std::array<float, maxBins>, maxChannels> previousMagnitude {};
     std::array<std::array<float, maxBins>, maxChannels> profilePower {};
     std::array<std::array<float, maxBins>, maxChannels> profileVarianceDb2 {};
+    std::array<std::atomic<float>, profileDisplayBins> profileDisplay {};
 
     std::array<float, maxBins> linkedGainState {};
     std::array<float, maxBins> previousFrequencyGain {};

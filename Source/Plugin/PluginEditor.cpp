@@ -161,7 +161,10 @@ void drawBypass (
     juce::Colour colour)
 {
     g.setColour (colour);
-    auto circle = area.reduced (6.0f);
+    auto available = area.reduced (5.0f);
+    const float diameter = juce::jmin (available.getWidth(), available.getHeight());
+    auto circle = juce::Rectangle<float> (diameter, diameter)
+        .withCentre (area.getCentre());
     g.drawEllipse (circle, 2.0f);
     g.drawLine (
         circle.getX() + 3.0f,
@@ -403,13 +406,13 @@ void LearnCircleButton::paintButton (
     }
     else if (profileReady)
     {
-        mainText = "Profile Ready";
-        subText = "Click to re-learn";
+        mainText = "Profile Active";
+        subText = "Click to update";
     }
     else if (rejected)
     {
-        mainText = "Try Again";
-        subText = "Capture noise only";
+        mainText = "Learn Noise";
+        subText = "Choose noise-only moment";
     }
 
     g.setColour (ui::textPrimary);
@@ -1081,6 +1084,18 @@ SmartDenoiseAudioProcessorEditor (
     profileStatus.setJustificationType (
         juce::Justification::centredLeft);
 
+    profileBankCaption.setText (
+        "CAPTURED PROFILE BANK",
+        juce::dontSendNotification);
+    profileBankCaption.setFont (juce::FontOptions (8.4f));
+    profileBankCaption.setColour (
+        juce::Label::textColourId,
+        ui::textMuted);
+    profileBankCaption.setJustificationType (
+        juce::Justification::centredRight);
+    profileBank.setTextWhenNothingSelected (
+        "No saved captures");
+
     quality.addItem (
         "Balanced - Live 1024",
         1);
@@ -1168,10 +1183,11 @@ SmartDenoiseAudioProcessorEditor (
         juce::Label::textColourId,
         ui::textPrimary);
 
-    const std::array<juce::Component*, 16> components {
+    const std::array<juce::Component*, 17> components {
         &title,
-        &profileName,
         &profileStatus,
+        &profileBankCaption,
+        &profileBank,
         &learn,
         &hearRemoved,
         &bypass,
@@ -1253,6 +1269,8 @@ SmartDenoiseAudioProcessorEditor (
         "Open the compact expert controls and profile diagnostics.");
     quality.setTooltip (
         "Live 1024 uses lower latency; Clean 2048 uses higher spectral resolution.");
+    profileBank.setTooltip (
+        "Captured-profile bank. Each entry restores the frozen noise profile plus Reduction, Preserve, Silence and Profile Offset captured with it.");
     profileOffset.setTooltip (
         "Fine-tunes the learned profile threshold. Double-click to reset to +1.5 dB.");
 
@@ -1261,6 +1279,19 @@ SmartDenoiseAudioProcessorEditor (
         {
             if (! processor.getEngine().isLearning())
                 processor.startNoiseLearn();
+        };
+
+    profileBank.onChange =
+        [this]
+        {
+            const auto name = profileBank.getText();
+            if (name.isNotEmpty()
+                && ! processor.loadCapturedProfilePreset (name))
+            {
+                profileStatus.setText (
+                    "Profile bank entry requires the matching quality mode",
+                    juce::dontSendNotification);
+            }
         };
 
     advanced.onClick =
@@ -1285,6 +1316,10 @@ SmartDenoiseAudioProcessorEditor (
 
     showAdvancedDrawer (false);
     syncBypassButton();
+    refreshProfileBank();
+    wasLearning = processor.getEngine().isLearning();
+    lastProfileBankQuality = static_cast<int> (
+        processor.getParameters().getRawParameterValue ("quality")->load());
 
     startTimerHz (24);
 }
@@ -1362,6 +1397,27 @@ syncBypassButton()
         bypass.setToggleState (
             enabledValue->load() < 0.5f,
             juce::dontSendNotification);
+    }
+}
+
+void SmartDenoiseAudioProcessorEditor::refreshProfileBank (
+    const juce::String& selectName)
+{
+    const auto names = processor.getCapturedProfilePresetNames();
+    profileBank.clear (juce::dontSendNotification);
+
+    for (int index = 0; index < names.size(); ++index)
+        profileBank.addItem (names[index], index + 1);
+
+    profileBank.setTextWhenNothingSelected (
+        names.isEmpty() ? "No saved captures" : "Select captured profile");
+
+    if (selectName.isNotEmpty())
+    {
+        const int selected = names.indexOf (selectName);
+        if (selected >= 0)
+            profileBank.setSelectedItemIndex (
+                selected, juce::dontSendNotification);
     }
 }
 
@@ -1517,104 +1573,88 @@ drawCaptureSection (
         1,
         "CAPTURE");
 
-    auto profilePill =
-        juce::Rectangle<float> (
-            static_cast<float> (
-                captureBounds.getX() + 20),
-            static_cast<float> (
-                captureBounds.getY() + 235),
-            static_cast<float> (
-                captureBounds.getWidth() - 40),
-            28.0f);
+    drawProfileFingerprint (g);
+}
+
+void SmartDenoiseAudioProcessorEditor::drawProfileFingerprint (
+    juce::Graphics& g)
+{
+    const auto& engine = processor.getEngine();
+    const bool hasProfile = engine.hasProfile();
+
+    auto card = juce::Rectangle<float> (
+        static_cast<float> (captureBounds.getX() + 20),
+        static_cast<float> (captureBounds.getY() + 229),
+        static_cast<float> (captureBounds.getWidth() - 40),
+        70.0f);
 
     g.setColour (ui::panelDeep);
-    g.fillRoundedRectangle (
-        profilePill,
-        14.0f);
+    g.fillRoundedRectangle (card, 9.0f);
+    g.setColour (ui::border.withAlpha (0.74f));
+    g.drawRoundedRectangle (card, 9.0f, 1.0f);
 
-    g.setColour (
-        ui::border.withAlpha (0.76f));
-    g.drawRoundedRectangle (
-        profilePill,
-        14.0f,
-        1.0f);
-
-    g.setColour (
-        processor.getEngine().hasProfile()
-            ? ui::accentCyan
-            : ui::accentPurple);
-
-    g.fillEllipse (
-        profilePill.getX() + 11.0f,
-        profilePill.getCentreY() - 3.5f,
-        7.0f,
-        7.0f);
-
-
-
-    g.setColour (ui::textSecondary);
-    g.setFont (
-        juce::FontOptions (9.0f));
+    g.setColour (hasProfile ? ui::accentCyan : ui::textMuted);
+    g.setFont (juce::FontOptions (8.3f));
     g.drawText (
-        "Profile Health",
-        captureBounds.getX() + 20,
-        captureBounds.getY() + 273,
-        captureBounds.getWidth() - 40,
-        17,
+        hasProfile ? "CAPTURED NOISE PROFILE" : "NOISE PROFILE  ·  EMPTY",
+        card.getX() + 9.0f,
+        card.getY() + 5.0f,
+        card.getWidth() - 18.0f,
+        14.0f,
         juce::Justification::centredLeft);
 
-    auto health =
-        juce::Rectangle<float> (
-            static_cast<float> (
-                captureBounds.getX() + 20),
-            static_cast<float> (
-                captureBounds.getY() + 298),
-            static_cast<float> (
-                captureBounds.getWidth() - 68),
-            5.0f);
+    auto graph = card.reduced (9.0f, 7.0f);
+    graph.removeFromTop (15.0f);
+    graph.removeFromBottom (2.0f);
 
-    g.setColour (ui::borderSoft);
-    g.fillRoundedRectangle (
-        health,
-        2.5f);
+    g.setColour (ui::borderSoft.withAlpha (0.80f));
+    g.drawLine (
+        graph.getX(), graph.getBottom(),
+        graph.getRight(), graph.getBottom(),
+        1.0f);
 
-    const float qualityValue =
-        processor.getEngine().hasProfile()
-            ? ui::clamp01 (
-                  processor.getEngine()
-                      .getProfileQuality())
-            : 0.0f;
+    if (! hasProfile)
+    {
+        g.setColour (ui::textMuted);
+        g.setFont (juce::FontOptions (8.5f));
+        g.drawText (
+            "Capture noise to build the denoise fingerprint",
+            graph.toNearestInt(),
+            juce::Justification::centred);
+        return;
+    }
 
-    auto fill = health;
-    fill.setWidth (
-        health.getWidth()
-        * qualityValue);
+    const auto fingerprint = engine.getProfileDisplay();
+    const float step = graph.getWidth()
+        / static_cast<float> (fingerprint.size());
 
-    g.setGradientFill (
-        ui::accentGradient (health));
-    g.fillRoundedRectangle (
-        fill,
-        2.5f);
+    for (size_t index = 0; index < fingerprint.size(); ++index)
+    {
+        const float value = ui::clamp01 (fingerprint[index]);
+        const float barHeight = 2.0f + value * (graph.getHeight() - 3.0f);
+        auto bar = juce::Rectangle<float> (
+            graph.getX() + static_cast<float> (index) * step + 0.55f,
+            graph.getBottom() - barHeight,
+            juce::jmax (1.0f, step - 1.1f),
+            barHeight);
 
-    g.setColour (
-        processor.getEngine().hasProfile()
-            ? ui::accentCyan
-            : ui::textMuted);
+        const float position = static_cast<float> (index)
+            / static_cast<float> (fingerprint.size() - 1);
+        g.setColour (
+            ui::accentPurple.interpolatedWith (
+                ui::accentCyan, position).withAlpha (0.78f));
+        g.fillRoundedRectangle (bar, 1.0f);
+    }
 
-    g.setFont (
-        juce::FontOptions (9.0f));
-
+    g.setColour (ui::textSecondary);
+    g.setFont (juce::FontOptions (7.8f));
     g.drawText (
-        processor.getEngine().hasProfile()
-            ? juce::String (
-                  juce::roundToInt (
-                      qualityValue * 100.0f))
-                  + "%"
-            : "--",
-        captureBounds.getRight() - 47,
-        captureBounds.getY() + 290,
-        29,
-        20,
+        juce::String (juce::roundToInt (engine.getProfileQuality() * 100.0f))
+            + "% quality  ·  frozen",
+        static_cast<int> (card.getX() + 8.0f),
+        static_cast<int> (card.getBottom() - 16.0f),
+        static_cast<int> (card.getWidth() - 16.0f),
+        12,
         juce::Justification::centredRight);
 }
 
@@ -2054,8 +2094,19 @@ void SmartDenoiseAudioProcessorEditor::resized()
     title.setBounds (
         headerBounds.getX() + 51,
         headerBounds.getY() + 8,
-        340,
+        330,
         37);
+
+    profileBankCaption.setBounds (
+        headerBounds.getX() + 470,
+        headerBounds.getY() + 17,
+        116,
+        20);
+    profileBank.setBounds (
+        headerBounds.getX() + 596,
+        headerBounds.getY() + 11,
+        292,
+        32);
 
     learn.setBounds (
         captureBounds.getX() + 37,
@@ -2063,17 +2114,11 @@ void SmartDenoiseAudioProcessorEditor::resized()
         144,
         144);
 
-    profileName.setBounds (
-        captureBounds.getX() + 45,
-        captureBounds.getY() + 236,
-        captureBounds.getWidth() - 64,
-        26);
-
     profileStatus.setBounds (
         captureBounds.getX() + 20,
-        captureBounds.getY() + 308,
+        captureBounds.getY() + 304,
         captureBounds.getWidth() - 40,
-        18);
+        20);
 
     reductionLabel.setBounds (
         cleanBounds.getX() + 25,
@@ -2192,6 +2237,26 @@ timerCallback()
     auto& engine =
         processor.getEngine();
 
+    const bool learningNow = engine.isLearning();
+    if (wasLearning
+        && ! learningNow
+        && engine.hasProfile()
+        && ! engine.wasLastLearnRejected())
+    {
+        const auto savedName = processor.saveCapturedProfilePreset();
+        if (savedName.isNotEmpty())
+            refreshProfileBank (savedName);
+    }
+    wasLearning = learningNow;
+
+    const int qualityIndexNow = static_cast<int> (
+        processor.getParameters().getRawParameterValue ("quality")->load());
+    if (qualityIndexNow != lastProfileBankQuality)
+    {
+        lastProfileBankQuality = qualityIndexNow;
+        refreshProfileBank();
+    }
+
     const auto frameAnalysis = engine.getFrameAnalysis();
 
     std::move (
@@ -2215,42 +2280,24 @@ timerCallback()
     if (engine.isLearning())
     {
         profileText =
-            "Learning  "
+            "Building frozen profile  ·  "
             + juce::String (
-                juce::roundToInt (
-                    engine.getLearningProgress()
-                    * 100.0f))
+                juce::roundToInt (engine.getLearningProgress() * 100.0f))
             + "%";
     }
     else if (engine.wasLastLearnRejected())
     {
-        profileText =
-            engine.hasProfile()
-                ? "Learn rejected - previous profile kept"
-                : "Learn rejected - capture noise only";
+        profileText = engine.hasProfile()
+            ? "Denoise active  ·  previous profile kept"
+            : "Waiting for a clean noise-only capture";
     }
     else if (engine.hasProfile())
     {
-        profileText =
-            "Frozen profile  "
-            + juce::String (
-                juce::roundToInt (
-                    engine.getProfileQuality()
-                    * 100.0f))
-            + "%";
-
-        profileName.setText (
-            "Frozen Noise Profile",
-            juce::dontSendNotification);
+        profileText = "Denoise active  ·  frozen noise profile";
     }
     else
     {
-        profileText =
-            "No profile - learn room noise";
-
-        profileName.setText (
-            "Noise Profile",
-            juce::dontSendNotification);
+        profileText = "Empty profile  ·  capture room noise to activate";
     }
 
     profileStatus.setText (

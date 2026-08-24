@@ -69,6 +69,10 @@ public:
         engine.startLearning (3.0);
     }
 
+    juce::StringArray getCapturedProfilePresetNames() const;
+    juce::String saveCapturedProfilePreset();
+    bool loadCapturedProfilePreset (const juce::String& presetName);
+
     float getInputPeakDb() const noexcept
     {
         return inputPeakDb.load (std::memory_order_relaxed);
@@ -84,6 +88,8 @@ private:
         createParameterLayout();
 
     void applyParametersToEngine();
+    juce::File getCapturedPresetDirectory() const;
+    void setRawParameterValue (const juce::String& parameterId, float rawValue);
 
     smartdenoise::SmartDenoiseEngine engine;
 

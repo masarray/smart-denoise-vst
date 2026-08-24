@@ -120,9 +120,11 @@ private:
     void showAdvancedDrawer (bool shouldShow);
     void setBypassed (bool shouldBypass);
     void syncBypassButton();
+    void refreshProfileBank (const juce::String& selectName = {});
 
     void drawHeader (juce::Graphics&);
     void drawCaptureSection (juce::Graphics&);
+    void drawProfileFingerprint (juce::Graphics&);
     void drawCleanSection (juce::Graphics&);
     void drawCheckSection (juce::Graphics&);
     void drawActivityStrip (juce::Graphics&);
@@ -154,6 +156,8 @@ private:
     juce::Label title;
     juce::Label profileName;
     juce::Label profileStatus;
+    juce::Label profileBankCaption;
+    juce::ComboBox profileBank;
 
     smartdenoiseui::LearnCircleButton learn;
     smartdenoiseui::MonitorButton hearRemoved {
@@ -210,6 +214,8 @@ private:
     float displayedOutputDb = -72.0f;
 
     bool advancedDrawerVisible = false;
+    bool wasLearning = false;
+    int lastProfileBankQuality = -1;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (
         SmartDenoiseAudioProcessorEditor)

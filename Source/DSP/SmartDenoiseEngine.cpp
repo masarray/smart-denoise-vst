@@ -376,6 +376,8 @@ void SmartDenoiseEngine::invalidateProfile() noexcept
     profileSampleRate = 0.0;
     profileFftSize = 0;
     profileChannels = 0;
+    for (auto& value : profileDisplay)
+        value.store (0.0f, std::memory_order_relaxed);
 
     resetSpectralState();
     clearFrameAnalysis();
@@ -420,6 +422,70 @@ SmartDenoiseEngine::getFrameAnalysis() const noexcept
         frameTailProtection.load();
 
     return result;
+}
+
+std::array<float, SmartDenoiseEngine::profileDisplayBins>
+SmartDenoiseEngine::getProfileDisplay() const noexcept
+{
+    std::array<float, profileDisplayBins> result {};
+    for (int index = 0; index < profileDisplayBins; ++index)
+        result[static_cast<size_t> (index)] =
+            profileDisplay[static_cast<size_t> (index)].load (
+                std::memory_order_relaxed);
+    return result;
+}
+
+void SmartDenoiseEngine::publishProfileDisplay() noexcept
+{
+    std::array<float, profileDisplayBins> dbValues {};
+    const int sourceBins = juce::jlimit (2, maxBins, profileFftSize / 2 + 1);
+    const int channels = juce::jlimit (1, maxChannels, profileChannels);
+
+    float peakDb = -120.0f;
+    for (int displayBin = 0; displayBin < profileDisplayBins; ++displayBin)
+    {
+        const float t0 = static_cast<float> (displayBin)
+            / static_cast<float> (profileDisplayBins);
+        const float t1 = static_cast<float> (displayBin + 1)
+            / static_cast<float> (profileDisplayBins);
+        const float curved0 = std::pow (t0, 1.55f);
+        const float curved1 = std::pow (t1, 1.55f);
+        const int first = juce::jlimit (
+            1, sourceBins - 1,
+            1 + static_cast<int> (curved0 * static_cast<float> (sourceBins - 2)));
+        const int last = juce::jlimit (
+            first + 1, sourceBins,
+            1 + static_cast<int> (std::ceil (
+                curved1 * static_cast<float> (sourceBins - 2))));
+
+        double powerSum = 0.0;
+        int count = 0;
+        for (int channel = 0; channel < channels; ++channel)
+        {
+            for (int bin = first; bin < last; ++bin)
+            {
+                powerSum += profilePower[static_cast<size_t> (channel)]
+                    [static_cast<size_t> (bin)];
+                ++count;
+            }
+        }
+
+        const float meanPower = static_cast<float> (
+            powerSum / static_cast<double> (juce::jmax (1, count)));
+        const float db = 10.0f * std::log10 (juce::jmax (meanPower, 1.0e-16f));
+        dbValues[static_cast<size_t> (displayBin)] = db;
+        peakDb = juce::jmax (peakDb, db);
+    }
+
+    const float floorDb = peakDb - 42.0f;
+    for (int index = 0; index < profileDisplayBins; ++index)
+    {
+        const float normalized = juce::jlimit (
+            0.0f, 1.0f,
+            (dbValues[static_cast<size_t> (index)] - floorDb) / 42.0f);
+        profileDisplay[static_cast<size_t> (index)].store (
+            normalized, std::memory_order_relaxed);
+    }
 }
 
 void SmartDenoiseEngine::setQuality (
@@ -591,6 +657,7 @@ bool SmartDenoiseEngine::restoreProfile (
     profileSampleRate = savedRate;
     profileFftSize = savedFftSize;
     profileChannels = savedChannels;
+    publishProfileDisplay();
 
     lastLearnRejected.store (false);
     profileValid.store (true);
@@ -1064,6 +1131,7 @@ void SmartDenoiseEngine::finaliseLearningOnAudioThread() noexcept
         profileSampleRate = sampleRate;
         profileFftSize = fftSize;
         profileChannels = channelCount;
+        publishProfileDisplay();
 
         profileValid.store (true);
         lastLearnRejected.store (false);

@@ -251,6 +251,149 @@ void SmartDenoiseAudioProcessor::processBlock (
     }
 }
 
+juce::File SmartDenoiseAudioProcessor::getCapturedPresetDirectory() const
+{
+    return juce::File::getSpecialLocation (
+               juce::File::userApplicationDataDirectory)
+        .getChildFile ("Masarray")
+        .getChildFile ("Smart Denoise")
+        .getChildFile ("Captured Profiles");
+}
+
+void SmartDenoiseAudioProcessor::setRawParameterValue (
+    const juce::String& parameterId,
+    float rawValue)
+{
+    if (auto* parameter = parameters.getParameter (parameterId))
+    {
+        parameter->beginChangeGesture();
+        parameter->setValueNotifyingHost (parameter->convertTo0to1 (rawValue));
+        parameter->endChangeGesture();
+    }
+}
+
+juce::StringArray SmartDenoiseAudioProcessor::getCapturedProfilePresetNames() const
+{
+    juce::StringArray names;
+    const auto directory = getCapturedPresetDirectory();
+    if (! directory.isDirectory())
+        return names;
+
+    juce::Array<juce::File> files;
+    directory.findChildFiles (
+        files, juce::File::findFiles, false, "*.sdprofile");
+
+    const int currentQuality = static_cast<int> (
+        parameters.getRawParameterValue ("quality")->load());
+
+    for (const auto& file : files)
+    {
+        auto xml = juce::XmlDocument::parse (file);
+        if (xml == nullptr)
+            continue;
+
+        const auto preset = juce::ValueTree::fromXml (*xml);
+        if (! preset.isValid())
+            continue;
+
+        if (static_cast<int> (preset.getProperty ("qualityMode", -1))
+            != currentQuality)
+            continue;
+
+        names.addIfNotAlreadyThere (file.getFileNameWithoutExtension());
+    }
+
+    names.sort (true);
+    return names;
+}
+
+juce::String SmartDenoiseAudioProcessor::saveCapturedProfilePreset()
+{
+    if (! engine.hasProfile())
+        return {};
+
+    const auto encodedProfile = engine.serialiseProfile();
+    if (encodedProfile.isEmpty())
+        return {};
+
+    const auto directory = getCapturedPresetDirectory();
+    if (! directory.createDirectory())
+        return {};
+
+    const auto presetName = juce::Time::getCurrentTime().formatted (
+        "Capture %Y-%m-%d %H-%M-%S");
+
+    juce::ValueTree preset ("SMART_DENOISE_CAPTURE");
+    preset.setProperty ("qualityMode",
+        static_cast<int> (parameters.getRawParameterValue ("quality")->load()), nullptr);
+    preset.setProperty ("reduction",
+        parameters.getRawParameterValue ("reduction")->load(), nullptr);
+    preset.setProperty ("preserve",
+        parameters.getRawParameterValue ("preserve")->load(), nullptr);
+    preset.setProperty ("silence",
+        parameters.getRawParameterValue ("silence")->load(), nullptr);
+    preset.setProperty ("thresholdOffset",
+        parameters.getRawParameterValue ("thresholdOffset")->load(), nullptr);
+    preset.setProperty ("profileQuality", engine.getProfileQuality(), nullptr);
+    preset.setProperty ("noiseProfile", encodedProfile, nullptr);
+
+    const auto file = directory.getChildFile (presetName + ".sdprofile");
+    auto xml = preset.createXml();
+    if (xml == nullptr || ! xml->writeTo (file))
+        return {};
+
+    return presetName;
+}
+
+bool SmartDenoiseAudioProcessor::loadCapturedProfilePreset (
+    const juce::String& presetName)
+{
+    if (presetName.isEmpty())
+        return false;
+
+    const auto file = getCapturedPresetDirectory()
+        .getChildFile (presetName + ".sdprofile");
+    if (! file.existsAsFile())
+        return false;
+
+    auto xml = juce::XmlDocument::parse (file);
+    if (xml == nullptr)
+        return false;
+
+    const auto preset = juce::ValueTree::fromXml (*xml);
+    if (! preset.isValid())
+        return false;
+
+    const int currentQuality = static_cast<int> (
+        parameters.getRawParameterValue ("quality")->load());
+    if (static_cast<int> (preset.getProperty ("qualityMode", -1))
+        != currentQuality)
+        return false;
+
+    const auto profile = preset.getProperty ("noiseProfile").toString();
+    if (profile.isEmpty())
+        return false;
+
+    setRawParameterValue ("reduction",
+        static_cast<float> (preset.getProperty ("reduction", 8.0f)));
+    setRawParameterValue ("preserve",
+        static_cast<float> (preset.getProperty ("preserve", 0.75f)));
+    setRawParameterValue ("silence",
+        static_cast<float> (preset.getProperty ("silence", 0.55f)));
+    setRawParameterValue ("thresholdOffset",
+        static_cast<float> (preset.getProperty ("thresholdOffset", 1.5f)));
+
+    applyParametersToEngine();
+    if (! engine.restoreProfile (profile))
+    {
+        pendingProfile = profile;
+        return true;
+    }
+
+    pendingProfile.clear();
+    return true;
+}
+
 void SmartDenoiseAudioProcessor::getStateInformation (
     juce::MemoryBlock& destData)
 {
