@@ -1,0 +1,43 @@
+name: Apply P4.2 visual corrections
+
+on:
+  push:
+    branches:
+      - agent/ship-v0.3-rc
+
+permissions:
+  contents: write
+
+jobs:
+  apply-p42:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/ship-v0.3-rc
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Apply exact P4.2 patch
+        run: python tools/p42/apply.py
+
+      - name: Validate P4.2 contract
+        run: python qa/verify_p4_visual_fidelity.py
+
+      - name: Validate diff
+        run: git diff --check
+
+      - name: Commit final P4.2 source and remove one-shot machinery
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm tools/p42/apply.py .github/workflows/p42-apply.yml
+          git add Source/Plugin/PluginEditor.cpp qa/verify_p4_visual_fidelity.py
+          git commit -m "P4.2: full-circle Learn progress and clean headphone icon"
+          git push origin HEAD:agent/ship-v0.3-rc
