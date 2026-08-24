@@ -25,7 +25,7 @@
 - No mutex, file I/O or dynamic container was added to the audio callback.
 
 ### Validation / delivery
-- Added deterministic P4 visual-fidelity source contract, including P4.2 full-circle Learn/headphone-silhouette assertions and P4.3 physical-depth/gloss assertions.
+- Added deterministic P4 visual-fidelity source contract, including P4.2 full-circle Learn/headphone-silhouette assertions and P4.4 flat-machined knob material assertions.
 - CI continues to require P0-P3 QA, native Windows build, C++ black-box tests, runtime standalone screenshot smoke and pluginval strictness 5.
 - Release workflow repeats Concept C + P4 gates before public publishing.
 - Target public release: v0.4.0.
