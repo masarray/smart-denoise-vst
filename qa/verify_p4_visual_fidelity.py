@@ -30,6 +30,11 @@ check("Primary macro shows percentage", 'juce::String (percent) + "%"' in editor
 check("Secondary knobs show percentages", "slider.getValue() * 100.0" in editor_cpp)
 check("Primary active arc glow", "stroke + (primary ? 8.0f : 4.0f)" in editor_cpp)
 check("Knob inner shading", "knobGradient" in editor_cpp)
+check("P4.3 physical knob shadow", "auto knobShadow =" in editor_cpp and "fillEllipse (knobShadow)" in editor_cpp)
+check("P4.3 metallic bezel", "auto metalBezel =" in editor_cpp and "bezelGradient" in editor_cpp)
+check("P4.3 inner bevel depth", "auto innerRim =" in editor_cpp and "rimGradient" in editor_cpp)
+check("P4.3 glossy specular reflection", "auto specularGlow =" in editor_cpp and "specularGradient" in editor_cpp)
+check("P4.3 dimensional marker", "auto markerShadow =" in editor_cpp and "auto markerBezel =" in editor_cpp)
 check("Clean headphone icon", "void drawHeadphones" in editor_cpp and "Icon::headphones" in editor_h)
 check("Clean bypass icon", "void drawBypass" in editor_cpp and "Icon::bypass" in editor_h)
 check("No improvised broken icon fragments", "drawHeadphoneIcon" not in editor_cpp)
@@ -49,7 +54,7 @@ check("Meter telemetry remains atomic", "std::atomic<float> inputPeakDb" in proc
 
 failed = [name for name, ok in checks if not ok]
 
-print("SMART DENOISE P4.2 VISUAL CORRECTION CONTRACT")
+print("SMART DENOISE P4.3 PREMIUM 3D KNOB CONTRACT")
 print("============================================")
 for name, ok in checks:
     print(f"[{'PASS' if ok else 'FAIL'}] {name}")

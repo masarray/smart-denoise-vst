@@ -571,7 +571,7 @@ void CleanLookAndFeel::drawRotarySlider (
                     angle);
 
             g.setColour (
-                ui::border.withAlpha (0.55f));
+                ui::border.withAlpha (0.50f));
             g.drawLine (
                 inner.x,
                 inner.y,
@@ -592,8 +592,17 @@ void CleanLookAndFeel::drawRotarySlider (
         endAngle,
         true);
 
+    // Deep recessed track behind the illuminated value ring.
+    g.setColour (juce::Colours::black.withAlpha (0.34f));
+    g.strokePath (
+        baseArc,
+        juce::PathStrokeType (
+            stroke + 5.0f,
+            juce::PathStrokeType::curved,
+            juce::PathStrokeType::rounded));
+
     g.setColour (
-        juce::Colour::fromRGB (44, 51, 68));
+        juce::Colour::fromRGB (47, 55, 74));
     g.strokePath (
         baseArc,
         juce::PathStrokeType (
@@ -615,6 +624,18 @@ void CleanLookAndFeel::drawRotarySlider (
         startAngle,
         valueAngle,
         true);
+
+    // Two-stage glow keeps the purple/blue illumination lively without
+    // turning the control into a neon toy.
+    g.setColour (
+        ui::accentBlue.withAlpha (
+            primary ? 0.065f : 0.050f));
+    g.strokePath (
+        activeArc,
+        juce::PathStrokeType (
+            stroke + (primary ? 14.0f : 8.0f),
+            juce::PathStrokeType::curved,
+            juce::PathStrokeType::rounded));
 
     g.setColour (
         ui::accentPurple.withAlpha (
@@ -648,32 +669,166 @@ void CleanLookAndFeel::drawRotarySlider (
             knobRadius * 2.0f)
             .withCentre (centre);
 
-    juce::ColourGradient knobGradient (
-        ui::panelRaised.brighter (0.07f),
-        centre.x,
-        knob.getY(),
-        ui::panelDeep.darker (0.18f),
-        centre.x,
-        knob.getBottom(),
+    // P4.3: physical depth. The shadow is intentionally offset downward
+    // while the bezel catches light from the upper-left.
+    auto knobShadow =
+        knob.expanded (primary ? 7.0f : 4.0f)
+            .translated (0.0f, primary ? 6.0f : 3.5f);
+
+    g.setColour (juce::Colours::black.withAlpha (0.48f));
+    g.fillEllipse (knobShadow);
+
+    auto metalBezel =
+        knob.expanded (primary ? 7.5f : 4.5f);
+
+    juce::ColourGradient bezelGradient (
+        juce::Colour::fromRGB (108, 120, 148).withAlpha (0.86f),
+        metalBezel.getX() + metalBezel.getWidth() * 0.22f,
+        metalBezel.getY() + metalBezel.getHeight() * 0.12f,
+        juce::Colour::fromRGB (22, 27, 39),
+        metalBezel.getRight() - metalBezel.getWidth() * 0.12f,
+        metalBezel.getBottom() - metalBezel.getHeight() * 0.08f,
         false);
+
+    bezelGradient.addColour (
+        0.34,
+        juce::Colour::fromRGB (66, 76, 98));
+    bezelGradient.addColour (
+        0.72,
+        juce::Colour::fromRGB (31, 37, 52));
+
+    g.setGradientFill (bezelGradient);
+    g.fillEllipse (metalBezel);
+
+    g.setColour (juce::Colours::white.withAlpha (0.15f));
+    g.drawEllipse (
+        metalBezel.reduced (0.8f),
+        primary ? 1.5f : 1.15f);
+
+    g.setColour (juce::Colours::black.withAlpha (0.66f));
+    g.drawEllipse (
+        metalBezel.reduced (primary ? 3.0f : 2.0f),
+        primary ? 2.4f : 1.7f);
+
+    // Inner bevel separates the metal bezel from the glossy glass face.
+    auto innerRim =
+        knob.expanded (primary ? 2.5f : 1.8f);
+
+    juce::ColourGradient rimGradient (
+        juce::Colour::fromRGB (56, 66, 88),
+        innerRim.getTopLeft(),
+        juce::Colour::fromRGB (14, 18, 27),
+        innerRim.getBottomRight(),
+        false);
+
+    g.setGradientFill (rimGradient);
+    g.fillEllipse (innerRim);
+
+    // Radial glass face: brighter upper-left focus falling into a deep
+    // graphite lower-right, giving the knob a real convex volume.
+    juce::ColourGradient knobGradient (
+        ui::panelRaised.brighter (0.42f),
+        knob.getX() + knob.getWidth() * 0.30f,
+        knob.getY() + knob.getHeight() * 0.24f,
+        ui::panelDeep.darker (0.45f),
+        knob.getRight() - knob.getWidth() * 0.18f,
+        knob.getBottom() - knob.getHeight() * 0.14f,
+        true);
+
+    knobGradient.addColour (
+        0.42,
+        juce::Colour::fromRGB (29, 37, 55));
+    knobGradient.addColour (
+        0.78,
+        juce::Colour::fromRGB (12, 17, 27));
 
     g.setGradientFill (knobGradient);
     g.fillEllipse (knob);
 
-    g.setColour (ui::borderSoft);
-    g.drawEllipse (knob, 1.0f);
+    // Fine bevels around the glass create the machined / layered edge.
+    g.setColour (juce::Colours::white.withAlpha (0.105f));
+    g.drawEllipse (
+        knob.reduced (1.6f),
+        primary ? 1.65f : 1.25f);
+
+    g.setColour (juce::Colours::black.withAlpha (0.58f));
+    g.drawEllipse (
+        knob.reduced (primary ? 5.0f : 3.5f),
+        primary ? 2.0f : 1.45f);
+
+    // Gloss reflection: a broad soft specular ellipse plus a small hot spot.
+    auto specularGlow =
+        juce::Rectangle<float> (
+            knob.getWidth() * 0.58f,
+            knob.getHeight() * 0.25f)
+            .withCentre (
+                { centre.x - knobRadius * 0.12f,
+                  centre.y - knobRadius * 0.48f });
+
+    juce::ColourGradient specularGradient (
+        juce::Colours::white.withAlpha (primary ? 0.19f : 0.16f),
+        specularGlow.getCentreX(),
+        specularGlow.getY(),
+        juce::Colours::white.withAlpha (0.0f),
+        specularGlow.getCentreX(),
+        specularGlow.getBottom(),
+        false);
+
+    g.setGradientFill (specularGradient);
+    g.fillEllipse (specularGlow);
+
+    g.setColour (juce::Colours::white.withAlpha (0.16f));
+    g.fillEllipse (
+        juce::Rectangle<float> (
+            primary ? 7.0f : 4.5f,
+            primary ? 4.0f : 3.0f)
+            .withCentre (
+                { centre.x - knobRadius * 0.34f,
+                  centre.y - knobRadius * 0.48f }));
 
     const auto marker =
         centre.getPointOnCircumference (
             radius,
             valueAngle);
 
+    const float markerSize =
+        primary ? 10.0f : 7.0f;
+
+    auto markerShadow =
+        juce::Rectangle<float> (
+            markerSize + 5.0f,
+            markerSize + 5.0f)
+            .withCentre (
+                { marker.x + 1.2f,
+                  marker.y + 1.8f });
+
+    g.setColour (juce::Colours::black.withAlpha (0.48f));
+    g.fillEllipse (markerShadow);
+
+    auto markerBezel =
+        juce::Rectangle<float> (
+            markerSize + 3.0f,
+            markerSize + 3.0f)
+            .withCentre (marker);
+
+    g.setColour (ui::accentBlue.withAlpha (0.82f));
+    g.fillEllipse (markerBezel);
+
     g.setColour (ui::textPrimary);
     g.fillEllipse (
         juce::Rectangle<float> (
-            primary ? 10.0f : 7.0f,
-            primary ? 10.0f : 7.0f)
+            markerSize,
+            markerSize)
             .withCentre (marker));
+
+    g.setColour (juce::Colours::white.withAlpha (0.60f));
+    g.fillEllipse (
+        juce::Rectangle<float> (
+            primary ? 3.2f : 2.3f,
+            primary ? 2.0f : 1.5f)
+            .withCentre (
+                { marker.x - markerSize * 0.16f,
+                  marker.y - markerSize * 0.18f }));
 
     juce::String valueText;
 
@@ -699,15 +854,25 @@ void CleanLookAndFeel::drawRotarySlider (
             juce::String (percent) + "%";
     }
 
-    g.setColour (ui::textPrimary);
+    const auto textArea =
+        knob.toNearestInt().reduced (
+            primary ? 24 : 10);
+
+    // Tiny text shadow anchors the value inside the glossy face.
+    g.setColour (juce::Colours::black.withAlpha (0.72f));
     g.setFont (
         juce::FontOptions (
             primary ? 35.0f : 15.5f));
-
     g.drawFittedText (
         valueText,
-        knob.toNearestInt().reduced (
-            primary ? 24 : 10),
+        textArea.translated (0, 1),
+        juce::Justification::centred,
+        1);
+
+    g.setColour (ui::textPrimary);
+    g.drawFittedText (
+        valueText,
+        textArea,
         juce::Justification::centred,
         1);
 }
