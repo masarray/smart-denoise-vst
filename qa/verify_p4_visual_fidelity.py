@@ -23,7 +23,7 @@ check("P4.2 Learn uses full 360-degree idle track", "g.drawEllipse (ringBounds, 
 check("P4.2 Learn progress spans full two-pi", "juce::MathConstants<float>::twoPi" in editor_cpp and "ringProgress >= 0.999f" in editor_cpp)
 check("P4.2 headphone has continuous headband silhouette", "headband.cubicTo" in editor_cpp and "leftCup" in editor_cpp and "rightCup" in editor_cpp)
 check("Learn completes inline without popup", "drawLearnPopup" not in editor_cpp and "showLearnPopup" not in editor_cpp)
-check("Learn profile ready state", '"Profile Ready"' in editor_cpp and '"Click to re-learn"' in editor_cpp)
+check("Learn active-profile state", 'mainText = "Profile Active"' in editor_cpp and 'subText = "Click to update"' in editor_cpp)
 check("Learn waveform icon", "drawWaveformIcon" in editor_cpp)
 check("P5 removes noisy macro tick halo", "tickCount = 25" not in editor_cpp)
 check("Primary macro shows percentage", 'juce::String (percent) + "%"' in editor_cpp)
