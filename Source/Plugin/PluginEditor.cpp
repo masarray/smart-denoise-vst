@@ -528,7 +528,7 @@ void CleanLookAndFeel::drawRotarySlider (
             static_cast<float> (y),
             static_cast<float> (width),
             static_cast<float> (height))
-            .reduced (5.0f);
+            .reduced (4.5f);
 
     const bool primary =
         slider.getName() == "primary";
@@ -538,13 +538,11 @@ void CleanLookAndFeel::drawRotarySlider (
             bounds.getWidth(),
             bounds.getHeight());
 
-    const float radius =
-        diameter
-        * (primary ? 0.43f : 0.39f);
-
     const auto centre = bounds.getCentre();
-    const float stroke =
-        primary ? 11.0f : 6.5f;
+    const float outerRadius =
+        diameter * (primary ? 0.432f : 0.392f);
+    const float trackStroke =
+        primary ? 10.0f : 6.0f;
 
     if (primary)
     {
@@ -553,30 +551,21 @@ void CleanLookAndFeel::drawRotarySlider (
         {
             const float t =
                 static_cast<float> (tick)
-                / static_cast<float> (
-                    tickCount - 1);
-
+                / static_cast<float> (tickCount - 1);
             const float angle =
-                startAngle
-                + t * (endAngle - startAngle);
-
+                startAngle + t * (endAngle - startAngle);
             const auto outer =
                 centre.getPointOnCircumference (
-                    radius + 15.0f,
+                    outerRadius + 14.0f,
                     angle);
-
             const auto inner =
                 centre.getPointOnCircumference (
-                    radius + 10.0f,
+                    outerRadius + 9.5f,
                     angle);
-
-            g.setColour (
-                ui::border.withAlpha (0.50f));
+            g.setColour (ui::border.withAlpha (0.44f));
             g.drawLine (
-                inner.x,
-                inner.y,
-                outer.x,
-                outer.y,
+                inner.x, inner.y,
+                outer.x, outer.y,
                 1.0f);
         }
     }
@@ -585,302 +574,235 @@ void CleanLookAndFeel::drawRotarySlider (
     baseArc.addCentredArc (
         centre.x,
         centre.y,
-        radius,
-        radius,
+        outerRadius,
+        outerRadius,
         0.0f,
         startAngle,
         endAngle,
         true);
 
-    g.setColour (juce::Colours::black.withAlpha (0.34f));
+    g.setColour (juce::Colours::black.withAlpha (0.42f));
     g.strokePath (
         baseArc,
         juce::PathStrokeType (
-            stroke + 5.0f,
+            trackStroke + (primary ? 4.0f : 2.5f),
             juce::PathStrokeType::curved,
             juce::PathStrokeType::rounded));
 
-    g.setColour (
-        juce::Colour::fromRGB (45, 51, 67));
+    g.setColour (juce::Colour::fromRGB (46, 50, 60));
     g.strokePath (
         baseArc,
         juce::PathStrokeType (
-            stroke,
+            trackStroke,
             juce::PathStrokeType::curved,
             juce::PathStrokeType::rounded));
 
     const float valueAngle =
-        startAngle
-        + sliderPos * (endAngle - startAngle);
+        startAngle + sliderPos * (endAngle - startAngle);
 
     juce::Path activeArc;
     activeArc.addCentredArc (
         centre.x,
         centre.y,
-        radius,
-        radius,
+        outerRadius,
+        outerRadius,
         0.0f,
         startAngle,
         valueAngle,
         true);
 
-    g.setColour (
-        ui::accentBlue.withAlpha (
-            primary ? 0.045f : 0.035f));
+    // Reference direction: the purple-blue arc is crisp and hardware-like,
+    // with restrained illumination rather than a broad synthetic glow.
+    g.setColour (ui::accentPurple.withAlpha (0.085f));
     g.strokePath (
         activeArc,
         juce::PathStrokeType (
-            stroke + (primary ? 8.0f : 4.0f),
+            trackStroke + (primary ? 2.8f : 1.6f),
             juce::PathStrokeType::curved,
             juce::PathStrokeType::rounded));
 
-    g.setColour (
-        ui::accentPurple.withAlpha (
-            primary ? 0.12f : 0.09f));
+    juce::ColourGradient arcGradient (
+        ui::accentPurple,
+        centre.x - outerRadius,
+        centre.y,
+        ui::accentBlue,
+        centre.x + outerRadius,
+        centre.y,
+        false);
+    arcGradient.addColour (
+        0.35,
+        juce::Colour::fromRGB (214, 28, 244));
+    g.setGradientFill (arcGradient);
     g.strokePath (
         activeArc,
         juce::PathStrokeType (
-            stroke + (primary ? 4.0f : 2.0f),
+            trackStroke,
             juce::PathStrokeType::curved,
             juce::PathStrokeType::rounded));
 
-    g.setGradientFill (
-        ui::accentGradient (
-            bounds.withSizeKeepingCentre (
-                radius * 2.2f,
-                radius * 2.2f)));
-
-    g.strokePath (
-        activeArc,
-        juce::PathStrokeType (
-            stroke,
-            juce::PathStrokeType::curved,
-            juce::PathStrokeType::rounded));
-
-    const float knobRadius =
-        radius - (primary ? 18.0f : 11.0f);
-
-    auto knob =
+    // Depth comes from a dark recessed circular cavity, not a bulging face.
+    const float recessRadius =
+        outerRadius - (primary ? 7.2f : 4.3f);
+    auto recess =
         juce::Rectangle<float> (
-            knobRadius * 2.0f,
-            knobRadius * 2.0f)
+            recessRadius * 2.0f,
+            recessRadius * 2.0f)
             .withCentre (centre);
 
-    auto recess =
-        knob.expanded (primary ? 10.5f : 6.0f);
-
     juce::ColourGradient recessGradient (
-        juce::Colour::fromRGB (10, 12, 17),
-        recess.getTopLeft(),
-        juce::Colour::fromRGB (26, 29, 38),
-        recess.getBottomRight(),
+        juce::Colour::fromRGB (5, 6, 9),
+        centre.x,
+        recess.getY(),
+        juce::Colour::fromRGB (20, 21, 26),
+        centre.x,
+        recess.getBottom(),
         false);
-
+    recessGradient.addColour (
+        0.48,
+        juce::Colour::fromRGB (8, 9, 12));
     g.setGradientFill (recessGradient);
     g.fillEllipse (recess);
 
-    g.setColour (juce::Colours::black.withAlpha (0.68f));
+    g.setColour (juce::Colours::black.withAlpha (0.82f));
     g.drawEllipse (
-        recess.reduced (0.8f),
-        primary ? 2.2f : 1.6f);
+        recess.reduced (0.5f),
+        primary ? 1.8f : 1.15f);
 
-    g.setColour (juce::Colours::white.withAlpha (0.04f));
+    // Thin restrained inner ring, similar to the reference housing lip.
+    g.setColour (juce::Colours::white.withAlpha (0.030f));
     g.drawEllipse (
-        recess.reduced (primary ? 4.0f : 2.6f),
-        primary ? 1.0f : 0.8f);
+        recess.reduced (primary ? 3.0f : 1.8f),
+        primary ? 0.85f : 0.55f);
 
+    // Make the face large and visually dominant. The reference is a flat
+    // machined disc sitting inside the cavity, not a small glass dome.
+    const float faceRadius =
+        outerRadius - (primary ? 12.2f : 7.0f);
+    auto face =
+        juce::Rectangle<float> (
+            faceRadius * 2.0f,
+            faceRadius * 2.0f)
+            .withCentre (centre);
+
+    // Narrow graphite bezel only: avoid wide chrome/3D rings.
     auto bezel =
-        knob.expanded (primary ? 3.2f : 2.1f);
-
-    juce::ColourGradient bezelGradient (
-        juce::Colour::fromRGB (78, 83, 97),
-        bezel.getX() + bezel.getWidth() * 0.22f,
-        bezel.getY() + bezel.getHeight() * 0.20f,
-        juce::Colour::fromRGB (18, 21, 28),
-        bezel.getRight() - bezel.getWidth() * 0.18f,
-        bezel.getBottom() - bezel.getHeight() * 0.14f,
-        false);
-
-    bezelGradient.addColour (
-        0.30,
-        juce::Colour::fromRGB (52, 58, 71));
-    bezelGradient.addColour (
-        0.68,
-        juce::Colour::fromRGB (27, 31, 40));
-
-    g.setGradientFill (bezelGradient);
+        face.expanded (primary ? 1.15f : 0.75f);
+    g.setColour (juce::Colour::fromRGB (28, 30, 36));
     g.fillEllipse (bezel);
-
-    g.setColour (juce::Colours::black.withAlpha (0.55f));
+    g.setColour (juce::Colours::black.withAlpha (0.72f));
     g.drawEllipse (
-        bezel.reduced (primary ? 1.2f : 0.9f),
-        primary ? 1.9f : 1.35f);
+        bezel,
+        primary ? 1.35f : 0.9f);
 
-    auto faceRim =
-        knob.expanded (primary ? 0.9f : 0.65f);
-
-    g.setColour (juce::Colour::fromRGB (23, 26, 34));
-    g.fillEllipse (faceRim);
-
-    juce::ColourGradient knobGradient (
-        juce::Colour::fromRGB (36, 38, 45),
-        knob.getX() + knob.getWidth() * 0.30f,
-        knob.getY() + knob.getHeight() * 0.24f,
-        juce::Colour::fromRGB (17, 19, 24),
-        knob.getRight() - knob.getWidth() * 0.18f,
-        knob.getBottom() - knob.getHeight() * 0.12f,
+    // Mostly-flat face: linear directional shading, deliberately no radial
+    // convex hotspot. This prevents the control from reading as a sphere.
+    juce::ColourGradient faceGradient (
+        juce::Colour::fromRGB (32, 34, 40),
+        centre.x - faceRadius * 0.58f,
+        centre.y - faceRadius * 0.50f,
+        juce::Colour::fromRGB (17, 18, 22),
+        centre.x + faceRadius * 0.70f,
+        centre.y + faceRadius * 0.66f,
         false);
+    faceGradient.addColour (
+        0.52,
+        juce::Colour::fromRGB (22, 23, 28));
+    g.setGradientFill (faceGradient);
+    g.fillEllipse (face);
 
-    knobGradient.addColour (
-        0.54,
-        juce::Colour::fromRGB (27, 29, 35));
-
-    g.setGradientFill (knobGradient);
-    g.fillEllipse (knob);
-
+    // Fine radial machining. Lots of low-alpha spokes give the subtle
+    // sunburst texture seen on premium brushed/machined hardware knobs.
     {
         juce::Graphics::ScopedSaveState state (g);
         juce::Path faceClip;
-        faceClip.addEllipse (knob.reduced (primary ? 1.6f : 1.2f));
+        faceClip.addEllipse (
+            face.reduced (primary ? 1.0f : 0.7f));
         g.reduceClipRegion (faceClip);
 
-        constexpr int spokeCount = 92;
+        constexpr int spokeCount = 144;
         for (int spoke = 0; spoke < spokeCount; ++spoke)
         {
             const float angle =
                 juce::MathConstants<float>::twoPi
                 * static_cast<float> (spoke)
                 / static_cast<float> (spokeCount);
-
             const auto end =
                 centre.getPointOnCircumference (
-                    knobRadius,
+                    faceRadius,
                     angle);
 
+            const float alpha =
+                (spoke % 3 == 0) ? 0.028f : 0.012f;
             g.setColour (
-                juce::Colours::white.withAlpha (
-                    (spoke % 2 == 0) ? 0.024f : 0.012f));
+                juce::Colours::white.withAlpha (alpha));
             g.drawLine (
                 centre.x,
                 centre.y,
                 end.x,
                 end.y,
-                0.75f);
+                0.52f);
         }
+
+        // A directional satin sheen only. No circular specular ellipse,
+        // no glossy dome, no sphere highlight.
+        juce::ColourGradient directionalSheen (
+            juce::Colours::white.withAlpha (0.042f),
+            centre.x - faceRadius * 0.70f,
+            centre.y - faceRadius * 0.64f,
+            juce::Colours::transparentWhite,
+            centre.x + faceRadius * 0.34f,
+            centre.y + faceRadius * 0.30f,
+            false);
+        g.setGradientFill (directionalSheen);
+
+        juce::Path sheenBand;
+        sheenBand.startNewSubPath (
+            face.getX(),
+            face.getY() + face.getHeight() * 0.20f);
+        sheenBand.lineTo (
+            face.getRight(),
+            face.getY() + face.getHeight() * 0.40f);
+        sheenBand.lineTo (
+            face.getRight(),
+            face.getY() + face.getHeight() * 0.53f);
+        sheenBand.lineTo (
+            face.getX(),
+            face.getY() + face.getHeight() * 0.33f);
+        sheenBand.closeSubPath();
+        g.fillPath (sheenBand);
     }
 
-    auto sheen =
-        juce::Rectangle<float> (
-            knob.getWidth() * 0.74f,
-            knob.getHeight() * 0.24f)
-            .withCentre (
-                { knob.getCentreX() - knob.getWidth() * 0.07f,
-                  knob.getY() + knob.getHeight() * 0.26f });
-
-    juce::ColourGradient sheenGradient (
-        juce::Colours::white.withAlpha (0.13f),
-        sheen.getCentreX(),
-        sheen.getY(),
-        juce::Colours::white.withAlpha (0.0f),
-        sheen.getCentreX(),
-        sheen.getBottom(),
-        false);
-
-    g.setGradientFill (sheenGradient);
-    g.fillEllipse (sheen);
-
-    g.setColour (juce::Colours::white.withAlpha (0.085f));
+    // Very thin face edge, not a 3D bevel.
+    g.setColour (juce::Colours::white.withAlpha (0.045f));
     g.drawEllipse (
-        knob.reduced (1.0f),
-        primary ? 1.15f : 0.9f);
-
-    g.setColour (juce::Colours::black.withAlpha (0.62f));
-    g.drawEllipse (
-        knob.reduced (primary ? 6.0f : 4.2f),
-        primary ? 1.5f : 1.05f);
-
-    g.setColour (juce::Colours::black.withAlpha (0.35f));
-    g.fillEllipse (
-        juce::Rectangle<float> (
-            primary ? 5.0f : 3.2f,
-            primary ? 5.0f : 3.2f)
-            .withCentre (
-                { centre.x,
-                  centre.y + (primary ? 1.4f : 0.9f) }));
-
-    const auto marker =
-        centre.getPointOnCircumference (
-            radius,
-            valueAngle);
-
-    const float markerDiameter =
-        primary ? 10.0f : 7.0f;
-
-    g.setColour (juce::Colours::black.withAlpha (0.42f));
-    g.fillEllipse (
-        juce::Rectangle<float> (
-            markerDiameter + 2.8f,
-            markerDiameter + 2.8f)
-            .withCentre (
-                { marker.x + 0.9f,
-                  marker.y + 1.0f }));
-
-    g.setColour (
-        ui::accentBlue.withAlpha (0.44f));
-    g.fillEllipse (
-        juce::Rectangle<float> (
-            markerDiameter + 1.4f,
-            markerDiameter + 1.4f)
-            .withCentre (marker));
-
-    g.setColour (ui::textPrimary);
-    g.fillEllipse (
-        juce::Rectangle<float> (
-            markerDiameter,
-            markerDiameter)
-            .withCentre (marker));
-
-    g.setColour (juce::Colours::white.withAlpha (0.48f));
-    g.fillEllipse (
-        juce::Rectangle<float> (
-            markerDiameter * 0.34f,
-            markerDiameter * 0.34f)
-            .withCentre (
-                { marker.x - markerDiameter * 0.14f,
-                  marker.y - markerDiameter * 0.16f }));
+        face.reduced (primary ? 0.8f : 0.55f),
+        primary ? 0.72f : 0.50f);
 
     juce::String valueText;
-
     if (primary)
     {
         const auto percent =
             juce::roundToInt (
                 100.0
                 * slider.getValue()
-                / smartdenoise::SmartDenoiseEngine::
-                    maxReductionDb);
-
-        valueText =
-            juce::String (percent) + "%";
+                / smartdenoise::SmartDenoiseEngine::maxReductionDb);
+        valueText = juce::String (percent) + "%";
     }
     else
     {
         const auto percent =
             juce::roundToInt (
                 slider.getValue() * 100.0);
-
-        valueText =
-            juce::String (percent) + "%";
+        valueText = juce::String (percent) + "%";
     }
 
     g.setColour (ui::textPrimary);
     g.setFont (
         juce::FontOptions (
             primary ? 35.0f : 15.5f));
-
     g.drawFittedText (
         valueText,
-        knob.toNearestInt().reduced (
+        face.toNearestInt().reduced (
             primary ? 24 : 10),
         juce::Justification::centred,
         1);
