@@ -10,6 +10,7 @@
 - P4.3 upgrades all rotary controls to a premium dimensional material system: recessed illuminated track, lower physical shadow, machined metallic bezel, inner bevel, radial convex glass face, restrained specular reflection and a layered luminous value marker.
 - P4.3 preserves the existing knob geometry and parameter mapping, so the added depth does not reopen layout collision or automation compatibility risks.
 - Upgraded the primary Reduce Noise macro with a thicker gradient arc, glow pass, radial inner disc, visual ticks, white marker and explicit percentage readout.
+- P4.4 retunes the knob family away from a spherical dome and toward a flatter machined-disc look with a recessed well, narrower bezel, brushed radial face texture and restrained sheen closer to premium hardware knobs.
 - Preserve Detail and Silence Clean-up use the same visual family and display percentages instead of raw 0..1 values.
 - Improved typography hierarchy, disciplined spacing, panel depth, inner highlights and restrained graphite/navy surfaces.
 - Upgraded segmented input/output meters with scale ticks, glow and cleaner readouts.
