@@ -74,6 +74,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python qa/verify_p4_visual_fidelity.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python qa/verify_p5_ux_integrity.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Configure
         shell: pwsh
