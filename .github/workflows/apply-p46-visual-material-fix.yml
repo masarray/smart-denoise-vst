@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/apply-p46-visual-material-fix.yml'
       - 'tools/apply_p46_visual_material_fix.py'
+      - 'tools/fix_p46_qa_contract.py'
 
 permissions:
   contents: write
@@ -27,6 +28,9 @@ jobs:
       - name: Apply exact P4.6 visual material patch
         run: python tools/apply_p46_visual_material_fix.py
 
+      - name: Migrate P4.5 visual assertions to P4.6
+        run: python tools/fix_p46_qa_contract.py
+
       - name: Validate P4.6 visual contract
         run: python qa/verify_p4_visual_fidelity.py
 
@@ -37,7 +41,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm -f .github/workflows/apply-p46-visual-material-fix.yml tools/apply_p46_visual_material_fix.py
+          git rm -f .github/workflows/apply-p46-visual-material-fix.yml tools/apply_p46_visual_material_fix.py tools/fix_p46_qa_contract.py
           git add Source/Plugin/PluginEditor.cpp qa/verify_p4_visual_fidelity.py CHANGELOG.md
           if git diff --cached --quiet; then
             echo 'No changes to commit.'
