@@ -28,6 +28,7 @@
 
 ### Validation / delivery
 - P4.6 visual contract explicitly rejects translucent knob overlays, requires perimeter-only 3D knob edges with a flat machined face, and requires Learn Noise to render as a raised clickable circular button.
+- P4.6 syntax scope was restored after the first MSVC pass exposed a missing brace in the machining clip block; final validation is run from a normal user commit.
 - CI continues to require P0-P3 QA, native Windows build, C++ black-box tests, runtime standalone screenshot smoke and pluginval strictness 5.
 - Release workflow repeats Concept C + P4 gates before public publishing.
 - Target public release: v0.4.0.
