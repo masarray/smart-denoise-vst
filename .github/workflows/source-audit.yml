@@ -45,6 +45,9 @@ jobs:
       - name: Validate P5 UX integrity contract
         run: python qa/verify_p5_ux_integrity.py
 
+      - name: Validate P5.2 profile workflow contract
+        run: python qa/verify_p52_profile_workflow.py
+
   windows-build:
     name: Windows VST3 + Standalone + pluginval
     needs: source-audit
@@ -86,7 +89,7 @@ jobs:
           Write-Host "VST3: $($vst.FullName)"
           Write-Host "Standalone: $($standalone.FullName)"
 
-      - name: Capture mandatory P5.1 plugin visual
+      - name: Capture mandatory P5.2 plugin visual
         id: ui_capture
         shell: pwsh
         run: |
@@ -180,7 +183,7 @@ jobs:
             $pluginLeft = $target.Rect.Left + [int] [Math]::Floor(($target.Width - $pluginWidth) / 2.0)
             $pluginTop = $target.Rect.Bottom - $pluginHeight
 
-            $pngPath = Join-Path $PWD 'ui-snapshot/Smart-Denoise-P5.1-runtime.png'
+            $pngPath = Join-Path $PWD 'ui-snapshot/Smart-Denoise-P5.2-runtime.png'
             $bitmap = New-Object System.Drawing.Bitmap($pluginWidth, $pluginHeight)
             $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
             try {
@@ -266,8 +269,8 @@ jobs:
             -DestinationPath Smart-Denoise-Windows-CI.zip `
             -Force
 
-          if (-not (Test-Path 'ui-snapshot/Smart-Denoise-P5.1-runtime.png')) {
-            throw 'Mandatory P5.1 runtime screenshot missing before artifact upload'
+          if (-not (Test-Path 'ui-snapshot/Smart-Denoise-P5.2-runtime.png')) {
+            throw 'Mandatory P5.2 runtime screenshot missing before artifact upload'
           }
 
       - name: Upload Windows build
@@ -277,6 +280,6 @@ jobs:
           path: |
             Smart-Denoise-Windows-CI.zip
             pluginval-logs/**
-            ui-snapshot/Smart-Denoise-P5.1-runtime.png
+            ui-snapshot/Smart-Denoise-P5.2-runtime.png
           if-no-files-found: error
           retention-days: 14
