@@ -1,0 +1,47 @@
+name: Apply P4.4 flat machined knob renderer
+
+on:
+  pull_request:
+    branches: [agent/ship-v0.3-rc]
+    paths:
+      - '.github/workflows/apply-p44-flat-knobs.yml'
+      - 'tools/apply_p44_flat_knobs.py'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  apply-p44:
+    if: github.event.pull_request.head.ref == 'agent/ship-v0.3-rc'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Apply exact P4.4 flat knob patch
+        run: python tools/apply_p44_flat_knobs.py
+
+      - name: Validate P4 visual contract
+        run: python qa/verify_p4_visual_fidelity.py
+
+      - name: Validate diff
+        run: git diff --check
+
+      - name: Commit final P4.4 source and remove one-shot machinery
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm -f .github/workflows/apply-p44-flat-knobs.yml tools/apply_p44_flat_knobs.py
+          git add Source/Plugin/PluginEditor.cpp qa/verify_p4_visual_fidelity.py CHANGELOG.md
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git commit -m 'P4.4: switch knobs to flat machined-disc style'
+          git push origin HEAD:agent/ship-v0.3-rc
