@@ -26,6 +26,7 @@ cpp.write_text(s, encoding='utf-8', newline='\n')
 s = p5.read_text(encoding='utf-8')
 s = s.replace('"shouldShow ? 660 : 540" in cpp and "{ 15, 538, 910, 106 }" in cpp', '"shouldShow ? 704 : 540" in cpp and "{ 15, 538, 910, 150 }" in cpp')
 s = s.replace('check("Advanced drawer compact",', 'check("P5.1 Advanced drawer has collision-safe geometry",')
+s = s.replace('and "DSP CEILING" in advanced)', 'and ("DSP ceiling" in advanced or "DSP CEILING" in advanced))')
 p5.write_text(s, encoding='utf-8', newline='\n')
 
 s = concept.read_text(encoding='utf-8')
