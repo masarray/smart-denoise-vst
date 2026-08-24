@@ -155,11 +155,6 @@ private:
     juce::Label profileName;
     juce::Label profileStatus;
 
-    juce::TextButton abButton { "A / B" };
-    juce::TextButton undoButton { "UNDO" };
-    juce::TextButton redoButton { "REDO" };
-    juce::TextButton helpButton { "?" };
-
     smartdenoiseui::LearnCircleButton learn;
     smartdenoiseui::MonitorButton hearRemoved {
         "Hear Removed",
@@ -208,8 +203,8 @@ private:
     juce::Rectangle<int> footerBounds;
     juce::Rectangle<int> advancedBounds;
 
-    std::array<float, 112> inputHistory {};
-    std::array<float, 112> outputHistory {};
+    std::array<float, 112> reductionHistory {};
+    juce::TooltipWindow tooltipWindow { nullptr, 450 };
 
     float displayedInputDb = -72.0f;
     float displayedOutputDb = -72.0f;

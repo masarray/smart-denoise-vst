@@ -585,32 +585,6 @@ void CleanLookAndFeel::drawRotarySlider (
     const float trackStroke =
         primary ? 10.0f : 6.0f;
 
-    if (primary)
-    {
-        constexpr int tickCount = 25;
-        for (int tick = 0; tick < tickCount; ++tick)
-        {
-            const float t =
-                static_cast<float> (tick)
-                / static_cast<float> (tickCount - 1);
-            const float angle =
-                startAngle + t * (endAngle - startAngle);
-            const auto outer =
-                centre.getPointOnCircumference (
-                    outerRadius + 14.0f,
-                    angle);
-            const auto inner =
-                centre.getPointOnCircumference (
-                    outerRadius + 9.5f,
-                    angle);
-            g.setColour (ui::border.withAlpha (0.44f));
-            g.drawLine (
-                inner.x, inner.y,
-                outer.x, outer.y,
-                1.0f);
-        }
-    }
-
     juce::Path baseArc;
     baseArc.addCentredArc (
         centre.x,
@@ -1177,19 +1151,8 @@ SmartDenoiseAudioProcessorEditor (
             juce::Justification::centred);
     }
 
-    abButton.setName ("top");
-    undoButton.setName ("top");
-    redoButton.setName ("top");
-    helpButton.setName ("top");
     advanced.setName ("footer");
     advancedClose.setName ("footer");
-
-    abButton.setInterceptsMouseClicks (
-        false, false);
-    undoButton.setInterceptsMouseClicks (
-        false, false);
-    redoButton.setInterceptsMouseClicks (
-        false, false);
 
     hearRemoved.setName (
         "Hear Removed");
@@ -1205,14 +1168,10 @@ SmartDenoiseAudioProcessorEditor (
         juce::Label::textColourId,
         ui::textPrimary);
 
-    const std::array<juce::Component*, 20> components {
+    const std::array<juce::Component*, 16> components {
         &title,
         &profileName,
         &profileStatus,
-        &abButton,
-        &undoButton,
-        &redoButton,
-        &helpButton,
         &learn,
         &hearRemoved,
         &bypass,
@@ -1273,6 +1232,30 @@ SmartDenoiseAudioProcessorEditor (
             "quality",
             quality);
 
+    reduction.setDoubleClickReturnValue (true, 8.0);
+    preserve.setDoubleClickReturnValue (true, 0.75);
+    silence.setDoubleClickReturnValue (true, 0.55);
+    profileOffset.setDoubleClickReturnValue (true, 1.5);
+
+    learn.setTooltip (
+        "Capture 3 seconds of noise only. The learned profile stays frozen until you re-learn it.");
+    reduction.setTooltip (
+        "Noise reduction strength. Double-click to reset to 8 dB.");
+    preserve.setTooltip (
+        "Protects speech harmonics, consonants and transient detail. Double-click to reset.");
+    silence.setTooltip (
+        "Controls quiet-region clean-up after spectral denoising. Double-click to reset.");
+    hearRemoved.setTooltip (
+        "Monitor only what Smart Denoise is removing.");
+    bypass.setTooltip (
+        "Bypass Smart Denoise without changing the learned noise profile.");
+    advanced.setTooltip (
+        "Open the compact expert controls and profile diagnostics.");
+    quality.setTooltip (
+        "Live 1024 uses lower latency; Clean 2048 uses higher spectral resolution.");
+    profileOffset.setTooltip (
+        "Fine-tunes the learned profile threshold. Double-click to reset to +1.5 dB.");
+
     learn.onClick =
         [this]
         {
@@ -1291,12 +1274,6 @@ SmartDenoiseAudioProcessorEditor (
         [this]
         {
             showAdvancedDrawer (false);
-        };
-
-    helpButton.onClick =
-        [this]
-        {
-            showAdvancedDrawer (true);
         };
 
     bypass.onClick =
@@ -1353,7 +1330,7 @@ showAdvancedDrawer (
 
     setSize (
         940,
-        shouldShow ? 700 : 540);
+        shouldShow ? 660 : 540);
 
     resized();
     repaint();
@@ -1510,41 +1487,15 @@ void SmartDenoiseAudioProcessorEditor::
 drawHeader (
     juce::Graphics& g)
 {
-    drawPanel (
-        g,
-        headerBounds,
-        true);
+    drawPanel (g, headerBounds, true);
 
-    auto logoArea =
-        juce::Rectangle<float> (
-            static_cast<float> (
-                headerBounds.getX() + 15),
-            static_cast<float> (
-                headerBounds.getY() + 11),
-            28.0f,
-            30.0f);
+    auto logoArea = juce::Rectangle<float> (
+        static_cast<float> (headerBounds.getX() + 15),
+        static_cast<float> (headerBounds.getY() + 11),
+        28.0f, 30.0f);
 
     ui::drawWaveformIcon (
-        g,
-        logoArea,
-        ui::accentPurple.brighter (0.22f),
-        1.7f);
-
-    g.setColour (
-        ui::borderSoft.withAlpha (0.78f));
-    g.drawVerticalLine (
-        headerBounds.getX() + 300,
-        static_cast<float> (
-            headerBounds.getY() + 11),
-        static_cast<float> (
-            headerBounds.getBottom() - 11));
-
-    g.drawVerticalLine (
-        headerBounds.getRight() - 230,
-        static_cast<float> (
-            headerBounds.getY() + 11),
-        static_cast<float> (
-            headerBounds.getBottom() - 11));
+        g, logoArea, ui::accentPurple.brighter (0.22f), 1.7f);
 }
 
 void SmartDenoiseAudioProcessorEditor::
@@ -1599,11 +1550,7 @@ drawCaptureSection (
         7.0f,
         7.0f);
 
-    ui::drawChevron (
-        g,
-        { profilePill.getRight() - 12.0f,
-          profilePill.getCentreY() },
-        false);
+
 
     g.setColour (ui::textSecondary);
     g.setFont (
@@ -1675,76 +1622,30 @@ void SmartDenoiseAudioProcessorEditor::
 drawCleanSection (
     juce::Graphics& g)
 {
-    drawPanel (
-        g,
-        cleanBounds,
-        true);
-
+    drawPanel (g, cleanBounds, true);
     drawStepHeader (
         g,
-        juce::Rectangle<int> (
-            cleanBounds.getX() + 14,
-            cleanBounds.getY() + 12,
-            cleanBounds.getWidth() - 28,
-            23),
-        2,
-        "CLEAN");
+        juce::Rectangle<int> (cleanBounds.getX() + 14, cleanBounds.getY() + 12, cleanBounds.getWidth() - 28, 23),
+        2, "CLEAN");
 
-    g.setColour (
-        ui::borderSoft.withAlpha (0.78f));
+    g.setColour (ui::borderSoft.withAlpha (0.62f));
     g.drawVerticalLine (
         cleanBounds.getX() + 302,
-        static_cast<float> (
-            cleanBounds.getY() + 52),
-        static_cast<float> (
-            cleanBounds.getBottom() - 20));
+        static_cast<float> (cleanBounds.getY() + 52),
+        static_cast<float> (cleanBounds.getBottom() - 20));
 
-    const float normalizedReduction =
-        ui::clamp01 (
-            static_cast<float> (
-                reduction.getValue()
-                / smartdenoise::SmartDenoiseEngine::
-                    maxReductionDb));
+    const float normalizedReduction = ui::clamp01 (
+        static_cast<float> (reduction.getValue() / smartdenoise::SmartDenoiseEngine::maxReductionDb));
 
     juce::String character = "Gentle";
-    if (normalizedReduction > 0.68f)
-        character = "Strong";
-    else if (normalizedReduction > 0.30f)
-        character = "Moderate";
+    if (normalizedReduction > 0.68f) character = "Strong";
+    else if (normalizedReduction > 0.30f) character = "Moderate";
 
     g.setColour (ui::textSecondary);
-    g.setFont (
-        juce::FontOptions (9.4f));
+    g.setFont (juce::FontOptions (9.4f));
     g.drawText (
-        character,
-        reduction.getX(),
-        reduction.getBottom() - 22,
-        reduction.getWidth(),
-        17,
+        character, reduction.getX(), reduction.getBottom() - 22, reduction.getWidth(), 17,
         juce::Justification::centred);
-
-    g.setColour (
-        ui::textMuted);
-    g.setFont (
-        juce::FontOptions (8.6f));
-
-    g.drawFittedText (
-        "Protect voice presence",
-        preserve.getX() - 5,
-        preserve.getBottom() + 2,
-        preserve.getWidth() + 10,
-        16,
-        juce::Justification::centred,
-        1);
-
-    g.drawFittedText (
-        "Clean quiet regions",
-        silence.getX() - 5,
-        silence.getBottom() + 2,
-        silence.getWidth() + 10,
-        16,
-        juce::Justification::centred,
-        1);
 }
 
 void SmartDenoiseAudioProcessorEditor::
@@ -1801,7 +1702,7 @@ drawCheckSection (
             checkBounds.getBottom() - 77,
             checkBounds.getWidth() - 28,
             27),
-        "DETAIL GUARD",
+        "DETAIL GUARD  AUTO",
         analysis.detailProtection);
 
     drawTelemetry (
@@ -1811,7 +1712,7 @@ drawCheckSection (
             checkBounds.getBottom() - 43,
             checkBounds.getWidth() - 28,
             27),
-        "TAIL PROTECT",
+        "TAIL PROTECT  AUTO",
         analysis.tailProtection);
 }
 
@@ -1819,118 +1720,37 @@ void SmartDenoiseAudioProcessorEditor::
 drawActivityStrip (
     juce::Graphics& g)
 {
-    drawPanel (
-        g,
-        activityBounds,
-        false);
+    drawPanel (g, activityBounds, false);
+    auto graph = activityBounds.reduced (86, 12).toFloat();
 
-    auto graph =
-        activityBounds
-            .reduced (52, 11)
-            .toFloat();
+    g.setColour (ui::borderSoft.withAlpha (0.62f));
+    g.drawLine (graph.getX(), graph.getBottom() - 2.0f, graph.getRight(), graph.getBottom() - 2.0f, 1.0f);
 
-    g.setColour (
-        ui::borderSoft.withAlpha (0.72f));
-    g.drawLine (
-        graph.getX(),
-        graph.getCentreY(),
-        graph.getRight(),
-        graph.getCentreY(),
-        1.0f);
+    juce::Path path;
+    for (size_t i = 0; i < reductionHistory.size(); ++i)
+    {
+        const float norm = ui::clamp01 (
+            reductionHistory[i] / smartdenoise::SmartDenoiseEngine::maxReductionDb);
+        const float px = graph.getX() + graph.getWidth() * static_cast<float> (i)
+            / static_cast<float> (reductionHistory.size() - 1);
+        const float py = graph.getBottom() - 3.0f - norm * (graph.getHeight() - 6.0f);
+        if (i == 0) path.startNewSubPath (px, py); else path.lineTo (px, py);
+    }
 
-    g.drawLine (
-        graph.getCentreX(),
-        graph.getY() + 3.0f,
-        graph.getCentreX(),
-        graph.getBottom() - 3.0f,
-        1.0f);
-
-    auto makePath =
-        [&] (const std::array<float, 112>& values)
-        {
-            juce::Path path;
-
-            for (size_t i = 0;
-                 i < values.size();
-                 ++i)
-            {
-                const float norm =
-                    ui::clamp01 (
-                        (values[i] + 72.0f)
-                        / 72.0f);
-
-                const float x =
-                    graph.getX()
-                    + graph.getWidth()
-                        * static_cast<float> (i)
-                        / static_cast<float> (
-                            values.size() - 1);
-
-                const float excursion =
-                    (norm - 0.5f)
-                    * graph.getHeight()
-                    * 0.78f;
-
-                const float y =
-                    graph.getCentreY()
-                    - excursion;
-
-                if (i == 0)
-                    path.startNewSubPath (x, y);
-                else
-                    path.lineTo (x, y);
-            }
-
-            return path;
-        };
-
-    const auto inputPath =
-        makePath (inputHistory);
-    const auto outputPath =
-        makePath (outputHistory);
-
-    g.setColour (
-        ui::accentPurple.withAlpha (0.08f));
-    g.strokePath (
-        inputPath,
-        juce::PathStrokeType (5.0f));
-
-    g.setColour (
-        ui::accentBlue.withAlpha (0.08f));
-    g.strokePath (
-        outputPath,
-        juce::PathStrokeType (5.0f));
-
-    g.setColour (
-        ui::accentPurple.withAlpha (0.82f));
-    g.strokePath (
-        inputPath,
-        juce::PathStrokeType (1.2f));
-
-    g.setColour (
-        ui::accentBlue.brighter (0.12f));
-    g.strokePath (
-        outputPath,
-        juce::PathStrokeType (1.25f));
+    g.setColour (ui::accentPurple.withAlpha (0.075f));
+    g.strokePath (path, juce::PathStrokeType (4.0f));
+    g.setGradientFill (ui::accentGradient (graph));
+    g.strokePath (path, juce::PathStrokeType (1.35f));
 
     g.setColour (ui::textMuted);
-    g.setFont (
-        juce::FontOptions (8.8f));
-
+    g.setFont (juce::FontOptions (8.8f));
     g.drawText (
-        "Input",
-        activityBounds.getX() + 14,
-        activityBounds.getCentreY() - 9,
-        34,
-        18,
+        "Denoise activity", activityBounds.getX() + 14, activityBounds.getCentreY() - 9, 70, 18,
         juce::Justification::centredLeft);
-
+    g.setColour (ui::textSecondary);
     g.drawText (
-        "Output",
-        activityBounds.getRight() - 48,
-        activityBounds.getCentreY() - 9,
-        34,
-        18,
+        juce::String (reductionHistory.back(), 1) + " dB",
+        activityBounds.getRight() - 70, activityBounds.getCentreY() - 9, 55, 18,
         juce::Justification::centredRight);
 }
 
@@ -1968,124 +1788,58 @@ void SmartDenoiseAudioProcessorEditor::
 drawAdvancedDrawer (
     juce::Graphics& g)
 {
-    drawPanel (
-        g,
-        advancedBounds,
-        true);
+    drawPanel (g, advancedBounds, true);
+    const auto& engine = processor.getEngine();
+    const auto qualityIndex = static_cast<int> (
+        processor.getParameters().getRawParameterValue ("quality")->load());
 
-    g.setColour (
-        ui::borderSoft.withAlpha (0.72f));
+    auto left = juce::Rectangle<int> (
+        advancedBounds.getX() + 18, advancedBounds.getY() + 43,
+        advancedBounds.getWidth() / 2 - 34, advancedBounds.getHeight() - 55);
+    auto right = juce::Rectangle<int> (
+        advancedBounds.getCentreX() + 18, advancedBounds.getY() + 43,
+        advancedBounds.getWidth() / 2 - 36, advancedBounds.getHeight() - 55);
+
+    g.setColour (ui::borderSoft.withAlpha (0.52f));
     g.drawVerticalLine (
         advancedBounds.getCentreX(),
-        static_cast<float> (
-            advancedBounds.getY() + 48),
-        static_cast<float> (
-            advancedBounds.getBottom() - 18));
-
-    const auto& engine =
-        processor.getEngine();
-
-    const auto analysis =
-        engine.getFrameAnalysis();
-
-    auto left =
-        juce::Rectangle<int> (
-            advancedBounds.getX() + 18,
-            advancedBounds.getY() + 47,
-            advancedBounds.getWidth() / 2 - 34,
-            advancedBounds.getHeight() - 63);
-
-    auto right =
-        juce::Rectangle<int> (
-            advancedBounds.getCentreX() + 18,
-            advancedBounds.getY() + 47,
-            advancedBounds.getWidth() / 2 - 36,
-            advancedBounds.getHeight() - 63);
+        static_cast<float> (advancedBounds.getY() + 42),
+        static_cast<float> (advancedBounds.getBottom() - 14));
 
     g.setColour (ui::textSecondary);
-    g.setFont (
-        juce::FontOptions (9.2f));
-    g.drawText (
-        "PROCESSING",
-        left.removeFromTop (18),
-        juce::Justification::centredLeft);
-
-    left.removeFromTop (43);
-
+    g.setFont (juce::FontOptions (9.2f));
+    g.drawText ("PROCESSING", left.removeFromTop (18), juce::Justification::centredLeft);
+    left.removeFromTop (42);
     g.setColour (ui::textMuted);
-    g.setFont (
-        juce::FontOptions (8.6f));
+    g.setFont (juce::FontOptions (8.5f));
     g.drawText (
-        "Max Reduction",
-        left.removeFromTop (18),
-        juce::Justification::centredLeft);
-
-    g.setColour (ui::textPrimary);
-    g.setFont (
-        juce::FontOptions (10.2f));
-    g.drawText (
-        "24.0 dB",
-        left.removeFromTop (18),
-        juce::Justification::centredLeft);
+        "Fine-tune the learned profile threshold. Double-click resets it.",
+        left.removeFromTop (18), juce::Justification::centredLeft);
+    g.drawText ("DSP CEILING", left.removeFromTop (16), juce::Justification::centredLeft);
+    g.setColour (ui::textSecondary);
+    g.setFont (juce::FontOptions (10.0f));
+    g.drawText ("24 dB max reduction", left.removeFromTop (18), juce::Justification::centredLeft);
 
     g.setColour (ui::textSecondary);
-    g.setFont (
-        juce::FontOptions (9.2f));
+    g.setFont (juce::FontOptions (9.2f));
+    g.drawText ("PROFILE STATUS", right.removeFromTop (18), juce::Justification::centredLeft);
+    g.setColour (engine.hasProfile() ? ui::accentCyan : ui::textMuted);
+    g.setFont (juce::FontOptions (10.8f));
     g.drawText (
-        "NOISE PROFILE",
-        right.removeFromTop (18),
-        juce::Justification::centredLeft);
-
-    g.setColour (
-        engine.hasProfile()
-            ? ui::accentCyan
-            : ui::textMuted);
-
-    g.setFont (
-        juce::FontOptions (11.0f));
-
-    g.drawText (
-        engine.hasProfile()
-            ? "FROZEN / LOCKED"
-            : "NOT LEARNED",
-        right.removeFromTop (26),
-        juce::Justification::centredLeft);
+        engine.hasProfile() ? "FROZEN / LOCKED" : "NOT LEARNED",
+        right.removeFromTop (21), juce::Justification::centredLeft);
 
     g.setColour (ui::textMuted);
-    g.setFont (
-        juce::FontOptions (8.6f));
-
+    g.setFont (juce::FontOptions (8.6f));
+    const juce::String profileQuality = engine.hasProfile()
+        ? juce::String (juce::roundToInt (engine.getProfileQuality() * 100.0f)) + "%" : "--";
+    g.drawText ("Profile quality   " + profileQuality, right.removeFromTop (18), juce::Justification::centredLeft);
     g.drawText (
-        "Explicit Learn stays frozen until re-learn.",
-        right.removeFromTop (22),
-        juce::Justification::centredLeft);
-
-    auto detailArea =
-        right.removeFromTop (30);
-    drawTelemetry (
-        g,
-        detailArea,
-        "DETAIL GUARD",
-        analysis.detailProtection);
-
-    auto tailArea =
-        right.removeFromTop (30);
-    drawTelemetry (
-        g,
-        tailArea,
-        "TAIL PROTECT",
-        analysis.tailProtection);
-
-    g.setColour (ui::textMuted);
-    g.setFont (
-        juce::FontOptions (8.6f));
+        "Analysis quality  " + juce::String (qualityIndex == 1 ? "Clean 2048" : "Live 1024"),
+        right.removeFromTop (18), juce::Justification::centredLeft);
     g.drawText (
-        "Latency  "
-        + juce::String (
-            engine.getLatencySamples())
-        + " samples",
-        right.removeFromTop (22),
-        juce::Justification::centredLeft);
+        "Latency           " + juce::String (engine.getLatencySamples()) + " samples",
+        right.removeFromTop (18), juce::Justification::centredLeft);
 }
 
 void SmartDenoiseAudioProcessorEditor::
@@ -2298,32 +2052,8 @@ void SmartDenoiseAudioProcessorEditor::resized()
     title.setBounds (
         headerBounds.getX() + 51,
         headerBounds.getY() + 8,
-        228,
+        340,
         37);
-
-    abButton.setBounds (
-        headerBounds.getRight() - 219,
-        headerBounds.getY() + 12,
-        52,
-        29);
-
-    undoButton.setBounds (
-        headerBounds.getRight() - 162,
-        headerBounds.getY() + 12,
-        44,
-        29);
-
-    redoButton.setBounds (
-        headerBounds.getRight() - 115,
-        headerBounds.getY() + 12,
-        44,
-        29);
-
-    helpButton.setBounds (
-        headerBounds.getRight() - 63,
-        headerBounds.getY() + 12,
-        30,
-        29);
 
     learn.setBounds (
         captureBounds.getX() + 37,
@@ -2334,7 +2064,7 @@ void SmartDenoiseAudioProcessorEditor::resized()
     profileName.setBounds (
         captureBounds.getX() + 45,
         captureBounds.getY() + 236,
-        captureBounds.getWidth() - 82,
+        captureBounds.getWidth() - 64,
         26);
 
     profileStatus.setBounds (
@@ -2406,7 +2136,7 @@ void SmartDenoiseAudioProcessorEditor::resized()
     if (advancedDrawerVisible)
     {
         advancedBounds =
-            { 15, 538, 910, 146 };
+            { 15, 538, 910, 106 };
 
         advancedTitle.setBounds (
             advancedBounds.getX() + 18,
@@ -2422,13 +2152,13 @@ void SmartDenoiseAudioProcessorEditor::resized()
 
         profileOffsetLabel.setBounds (
             advancedBounds.getX() + 21,
-            advancedBounds.getY() + 69,
+            advancedBounds.getY() + 62,
             102,
             23);
 
         profileOffset.setBounds (
             advancedBounds.getX() + 125,
-            advancedBounds.getY() + 67,
+            advancedBounds.getY() + 60,
             286,
             27);
     }
@@ -2457,24 +2187,20 @@ timerCallback()
                   -72.0f,
                   displayedOutputDb - 1.8f);
 
-    std::move (
-        inputHistory.begin() + 1,
-        inputHistory.end(),
-        inputHistory.begin());
-
-    std::move (
-        outputHistory.begin() + 1,
-        outputHistory.end(),
-        outputHistory.begin());
-
-    inputHistory.back() =
-        displayedInputDb;
-
-    outputHistory.back() =
-        displayedOutputDb;
-
     auto& engine =
         processor.getEngine();
+
+    const auto frameAnalysis = engine.getFrameAnalysis();
+
+    std::move (
+        reductionHistory.begin() + 1,
+        reductionHistory.end(),
+        reductionHistory.begin());
+
+    reductionHistory.back() = juce::jlimit (
+        0.0f,
+        smartdenoise::SmartDenoiseEngine::maxReductionDb,
+        frameAnalysis.spectralReductionDb);
 
     learn.setLearnState (
         engine.isLearning(),
