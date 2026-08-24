@@ -1,0 +1,50 @@
+name: Apply P5 UX integrity
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-p5-ux-integrity.yml'
+      - 'tools/apply_p5_ux_integrity.py'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  apply-p5:
+    if: github.event.pull_request.head.ref == 'agent/ship-v0.3-rc'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Apply exact P5 UX integrity patch
+        run: python tools/apply_p5_ux_integrity.py
+
+      - name: Validate P4 contract after migration
+        run: python qa/verify_p4_visual_fidelity.py
+
+      - name: Validate P5 UX integrity contract
+        run: python qa/verify_p5_ux_integrity.py
+
+      - name: Validate diff
+        run: git diff --check
+
+      - name: Commit final P5 source and remove one-shot machinery
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm -f .github/workflows/apply-p5-ux-integrity.yml tools/apply_p5_ux_integrity.py
+          git add Source/Plugin/PluginEditor.cpp Source/Plugin/PluginEditor.h qa/verify_p4_visual_fidelity.py qa/verify_p5_ux_integrity.py .github/workflows/source-audit.yml .github/workflows/release.yml CHANGELOG.md
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git commit -m 'P5: enforce UX integrity and professional interactions'
+          git push origin HEAD:agent/ship-v0.3-rc
