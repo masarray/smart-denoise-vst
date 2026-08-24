@@ -17,7 +17,7 @@ check("P4.1 keeps compact 940x540 footprint", "setSize (940, 540)" in editor_cpp
 check("Disciplined panel geometry", "captureBounds =\n        { 15, 77, 218, 330 }" in editor_cpp and "cleanBounds =\n        { 245, 77, 456, 330 }" in editor_cpp)
 check("Panel renderer with layered depth", "void SmartDenoiseAudioProcessorEditor::drawPanel" in editor_cpp and "panelGradient" in editor_cpp)
 check("Restrained violet-blue accents", "accentPurple" in editor_cpp and "accentBlue" in editor_cpp and "accentGradient" in editor_cpp)
-check("Circular inline learn component", "class LearnCircleButton" in editor_h and "fillEllipse (circle)" in editor_cpp)
+check("Circular inline learn component", "class LearnCircleButton" in editor_h and ("fillEllipse (circle)" in editor_cpp or "fillEllipse (faceCircle)" in editor_cpp))
 check("Learn progress ring", "ringProgress = progress" in editor_cpp and "progressArc.addCentredArc" in editor_cpp)
 check("Learn completes inline without popup", "drawLearnPopup" not in editor_cpp and "showLearnPopup" not in editor_cpp)
 check("Learn profile ready state", '"Profile Ready"' in editor_cpp and '"Click to re-learn"' in editor_cpp)
