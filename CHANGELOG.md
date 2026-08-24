@@ -27,7 +27,7 @@
 - No mutex, file I/O or dynamic container was added to the audio callback.
 
 ### Validation / delivery
-- Added deterministic P4 visual-fidelity source contract, including P4.2 full-circle Learn/headphone-silhouette assertions and P4.5 reference-knob assertions that reject sphere/gloss cues and require a dominant flat machined disc, recessed cavity, narrow bezel, radial machining and restrained directional sheen.
+- P4.6 visual contract explicitly rejects translucent knob overlays, requires perimeter-only 3D knob edges with a flat machined face, and requires Learn Noise to render as a raised clickable circular button.
 - CI continues to require P0-P3 QA, native Windows build, C++ black-box tests, runtime standalone screenshot smoke and pluginval strictness 5.
 - Release workflow repeats Concept C + P4 gates before public publishing.
 - Target public release: v0.4.0.
