@@ -86,7 +86,7 @@ jobs:
           Write-Host "VST3: $($vst.FullName)"
           Write-Host "Standalone: $($standalone.FullName)"
 
-      - name: Capture mandatory P5.1 runtime visual
+      - name: Capture mandatory P5.1 plugin visual
         id: ui_capture
         shell: pwsh
         run: |
@@ -112,6 +112,9 @@ jobs:
 
               [DllImport("user32.dll")]
               public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+
+              [DllImport("user32.dll")]
+              public static extern bool SetCursorPos(int x, int y);
           }
           "@
 
@@ -156,7 +159,7 @@ jobs:
             [SmartDenoiseWin32]::EnumWindows($callback, [IntPtr]::Zero) | Out-Null
 
             $target = $windows |
-              Where-Object { $_.Width -ge 800 -and $_.Height -ge 500 } |
+              Where-Object { $_.Width -ge 940 -and $_.Height -ge 540 } |
               Sort-Object Area -Descending |
               Select-Object -First 1
 
@@ -165,11 +168,23 @@ jobs:
               throw "No plugin-sized Standalone window found. Visible process windows: $diagnostic"
             }
 
+            [SmartDenoiseWin32]::SetCursorPos(0, 0) | Out-Null
+            Start-Sleep -Milliseconds 900
+
+            $pluginWidth = 940
+            $pluginHeight = 540
+            if ($target.Width -lt $pluginWidth -or $target.Height -lt $pluginHeight) {
+              throw "Standalone window cannot contain the expected ${pluginWidth}x${pluginHeight} editor"
+            }
+
+            $pluginLeft = $target.Rect.Left + [int] [Math]::Floor(($target.Width - $pluginWidth) / 2.0)
+            $pluginTop = $target.Rect.Bottom - $pluginHeight
+
             $pngPath = Join-Path $PWD 'ui-snapshot/Smart-Denoise-P5.1-runtime.png'
-            $bitmap = New-Object System.Drawing.Bitmap($target.Width, $target.Height)
+            $bitmap = New-Object System.Drawing.Bitmap($pluginWidth, $pluginHeight)
             $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
             try {
-              $graphics.CopyFromScreen($target.Rect.Left, $target.Rect.Top, 0, 0, $bitmap.Size)
+              $graphics.CopyFromScreen($pluginLeft, $pluginTop, 0, 0, $bitmap.Size)
               $bitmap.Save($pngPath, [System.Drawing.Imaging.ImageFormat]::Png)
             } finally {
               $graphics.Dispose()
@@ -187,10 +202,10 @@ jobs:
 
             $image = [System.Drawing.Image]::FromFile($pngPath)
             try {
-              if ($image.Width -lt 800 -or $image.Height -lt 500) {
+              if ($image.Width -ne $pluginWidth -or $image.Height -ne $pluginHeight) {
                 throw "Runtime screenshot dimensions are invalid: $($image.Width)x$($image.Height)"
               }
-              Write-Host "Runtime visual captured: $($image.Width)x$($image.Height), $($pngFile.Length) bytes"
+              Write-Host "Clean plugin visual captured: $($image.Width)x$($image.Height), $($pngFile.Length) bytes"
             } finally {
               $image.Dispose()
             }
