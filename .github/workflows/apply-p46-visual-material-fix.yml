@@ -1,0 +1,47 @@
+name: Apply P4.6 visual material fix
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-p46-visual-material-fix.yml'
+      - 'tools/apply_p46_visual_material_fix.py'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  apply-p46:
+    if: github.event.pull_request.head.ref == 'agent/ship-v0.3-rc'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Apply exact P4.6 visual material patch
+        run: python tools/apply_p46_visual_material_fix.py
+
+      - name: Validate P4.6 visual contract
+        run: python qa/verify_p4_visual_fidelity.py
+
+      - name: Validate diff
+        run: git diff --check
+
+      - name: Commit final P4.6 source and remove one-shot machinery
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm -f .github/workflows/apply-p46-visual-material-fix.yml tools/apply_p46_visual_material_fix.py
+          git add Source/Plugin/PluginEditor.cpp qa/verify_p4_visual_fidelity.py CHANGELOG.md
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git commit -m 'P4.6: fix knob artifacts and raise Learn button'
+          git push origin HEAD:agent/ship-v0.3-rc
