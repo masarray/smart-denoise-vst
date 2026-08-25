@@ -25,7 +25,14 @@ public:
         juce::MidiBuffer&) override;
 
     juce::AudioProcessorEditor* createEditor() override;
-    bool hasEditor() const override { return true; }
+    bool hasEditor() const override
+    {
+#ifdef SMART_DENOISE_HEADLESS_PROCESSOR_TEST
+        return false;
+#else
+        return true;
+#endif
+    }
 
     const juce::String getName() const override
     {
