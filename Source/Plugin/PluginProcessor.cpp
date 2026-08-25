@@ -1,5 +1,7 @@
 #include "PluginProcessor.h"
+#ifndef SMART_DENOISE_HEADLESS_PROCESSOR_TEST
 #include "PluginEditor.h"
+#endif
 
 #include <memory>
 #include <vector>
@@ -253,6 +255,12 @@ void SmartDenoiseAudioProcessor::processBlock (
 
 juce::File SmartDenoiseAudioProcessor::getCapturedPresetDirectory() const
 {
+    const auto testOverride = juce::SystemStats::getEnvironmentVariable (
+        "SMART_DENOISE_PROFILE_BANK_DIR", {});
+
+    if (testOverride.isNotEmpty())
+        return juce::File (testOverride);
+
     return juce::File::getSpecialLocation (
                juce::File::userApplicationDataDirectory)
         .getChildFile ("Masarray")
@@ -450,7 +458,11 @@ void SmartDenoiseAudioProcessor::setStateInformation (
 juce::AudioProcessorEditor*
 SmartDenoiseAudioProcessor::createEditor()
 {
+#ifdef SMART_DENOISE_HEADLESS_PROCESSOR_TEST
+    return nullptr;
+#else
     return new SmartDenoiseAudioProcessorEditor (*this);
+#endif
 }
 
 juce::AudioProcessor*

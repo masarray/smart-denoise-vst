@@ -94,4 +94,59 @@ if(SMART_DENOISE_BUILD_TESTS)
         NAME SmartDenoise.Engine
         COMMAND SmartDenoiseTests
     )
+
+    juce_add_console_app(SmartDenoiseProductTests
+        PRODUCT_NAME "Smart Denoise Product Tests"
+    )
+
+    target_sources(SmartDenoiseProductTests PRIVATE
+        ${SMART_DENOISE_ENGINE_SOURCES}
+        Source/Plugin/PluginProcessor.cpp
+        tests/SmartDenoiseProductTests.cpp
+    )
+
+    target_include_directories(SmartDenoiseProductTests PRIVATE Source)
+
+    target_compile_definitions(SmartDenoiseProductTests PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        SMART_DENOISE_HEADLESS_PROCESSOR_TEST=1
+        "JucePlugin_Name=\"Smart Denoise\""
+    )
+
+    target_link_libraries(SmartDenoiseProductTests PRIVATE
+        juce::juce_audio_processors
+        PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags
+    )
+
+    add_test(
+        NAME SmartDenoise.ProductWorkflow
+        COMMAND SmartDenoiseProductTests
+    )
+
+    juce_add_console_app(SmartDenoiseListeningHarness
+        PRODUCT_NAME "Smart Denoise Listening Harness"
+    )
+
+    target_sources(SmartDenoiseListeningHarness PRIVATE
+        ${SMART_DENOISE_ENGINE_SOURCES}
+        tests/SmartDenoiseListeningHarness.cpp
+    )
+
+    target_include_directories(SmartDenoiseListeningHarness PRIVATE Source)
+
+    target_compile_definitions(SmartDenoiseListeningHarness PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+    )
+
+    target_link_libraries(SmartDenoiseListeningHarness PRIVATE
+        juce::juce_audio_basics
+        juce::juce_core
+        PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags
+    )
 endif()
