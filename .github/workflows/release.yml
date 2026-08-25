@@ -24,7 +24,7 @@ jobs:
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main')
     runs-on: windows-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v6
@@ -78,6 +78,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python qa/verify_p52_profile_workflow.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python qa/verify_p53_validation.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Configure
         shell: pwsh
@@ -90,9 +92,20 @@ jobs:
         shell: pwsh
         run: cmake --build build --config Release --parallel 2
 
-      - name: Engine black-box tests
+      - name: Engine and product workflow tests
         shell: pwsh
         run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Generate P5.3 listening validation pack
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force listening-validation | Out-Null
+          $listeningHarness = Get-ChildItem -Path build -Recurse -File -Filter 'Smart Denoise Listening Harness.exe' |
+            Select-Object -First 1
+          if ($null -eq $listeningHarness) { throw 'Smart Denoise Listening Harness.exe was not produced' }
+          & $listeningHarness.FullName "$PWD/listening-validation"
+          if ($LASTEXITCODE -ne 0) { throw "P5.3 listening validation failed with exit code $LASTEXITCODE" }
+          if (-not (Test-Path 'listening-validation/metrics.csv')) { throw 'P5.3 metrics.csv missing' }
 
       - name: Locate products
         shell: pwsh
@@ -169,6 +182,7 @@ jobs:
             Smart-Denoise-VST3-${{ env.RELEASE_TAG }}-Windows-x64.zip
             Smart-Denoise-Standalone-${{ env.RELEASE_TAG }}-Windows-x64.zip
             Smart-Denoise-pluginval-${{ env.RELEASE_TAG }}.zip
+            listening-validation/**
           if-no-files-found: error
 
       - name: Publish GitHub Release
