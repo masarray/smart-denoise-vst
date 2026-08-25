@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <functional>
 #include <iostream>
+#include <memory>
 #include <string>
 
 namespace
@@ -118,111 +119,114 @@ void testRealWorkflow (TestContext& t)
     profileDirectory.createDirectory();
     setProfileDirectoryEnvironment (profileDirectory);
 
-    SmartDenoiseAudioProcessor processor;
-    processor.prepareToPlay (sampleRate, blockSize);
+    // SmartDenoiseAudioProcessor owns the large fixed-size FFT/profile engine.
+    // Keep processor fixtures on the heap so this product-level test does not
+    // exhaust the default Windows executable stack when several states coexist.
+    auto processor = std::make_unique<SmartDenoiseAudioProcessor>();
+    processor->prepareToPlay (sampleRate, blockSize);
 
-    t.expect (! processor.getEngine().hasProfile(),
+    t.expect (! processor->getEngine().hasProfile(),
               "EMPTY: new processor starts without a learned profile");
-    t.expect (fingerprintEnergy (processor.getEngine()) < 1.0e-6f,
+    t.expect (fingerprintEnergy (processor->getEngine()) < 1.0e-6f,
               "EMPTY: profile fingerprint is empty before Learn");
 
-    processor.startNoiseLearn();
-    t.expect (! processor.getEngine().hasProfile(),
+    processor->startNoiseLearn();
+    t.expect (! processor->getEngine().hasProfile(),
               "CAPTURING: Learn temporarily removes profile authority while capturing");
 
-    processGenerated (processor,
+    processGenerated (*processor,
                       static_cast<int> (sampleRate * 0.8),
                       [] (std::int64_t n, int) { return stationarySample (n); });
-    const float progressOne = processor.getEngine().getLearningProgress();
+    const float progressOne = processor->getEngine().getLearningProgress();
 
-    processGenerated (processor,
+    processGenerated (*processor,
                       static_cast<int> (sampleRate * 0.8),
                       [] (std::int64_t n, int) { return stationarySample (n); },
                       static_cast<std::int64_t> (sampleRate * 0.8));
-    const float progressTwo = processor.getEngine().getLearningProgress();
+    const float progressTwo = processor->getEngine().getLearningProgress();
 
-    t.expect (processor.getEngine().isLearning(),
+    t.expect (processor->getEngine().isLearning(),
               "CAPTURING: Learn remains active before the 3 second target");
     t.expect (progressOne > 0.05f && progressOne < 0.60f,
               "CAPTURING: progress reports a meaningful partial value");
     t.expect (progressTwo > progressOne && progressTwo < 0.90f,
               "CAPTURING: progress is monotonic while audio is captured");
 
-    processGenerated (processor,
+    processGenerated (*processor,
                       static_cast<int> (sampleRate * 2.0),
                       [] (std::int64_t n, int) { return stationarySample (n); },
                       static_cast<std::int64_t> (sampleRate * 1.6));
 
-    t.expect (! processor.getEngine().isLearning(),
+    t.expect (! processor->getEngine().isLearning(),
               "ACTIVE: Learn completes after enough noise-only audio");
-    t.expect (processor.getEngine().hasProfile(),
+    t.expect (processor->getEngine().hasProfile(),
               "ACTIVE: successful Learn creates a valid frozen profile");
-    t.expect (processor.getEngine().getProfileQuality() >= 0.25f,
+    t.expect (processor->getEngine().getProfileQuality() >= 0.25f,
               "ACTIVE: learned profile passes the quality gate");
-    t.expect (fingerprintEnergy (processor.getEngine()) > 0.1f,
+    t.expect (fingerprintEnergy (processor->getEngine()) > 0.1f,
               "ACTIVE: captured profile publishes a non-empty spectral fingerprint");
 
-    setRawParameter (processor, "reduction", 11.7f);
-    setRawParameter (processor, "preserve", 0.82f);
-    setRawParameter (processor, "silence", 0.43f);
-    setRawParameter (processor, "thresholdOffset", 2.4f);
+    setRawParameter (*processor, "reduction", 11.7f);
+    setRawParameter (*processor, "preserve", 0.82f);
+    setRawParameter (*processor, "silence", 0.43f);
+    setRawParameter (*processor, "thresholdOffset", 2.4f);
 
-    const auto savedName = processor.saveCapturedProfilePreset();
+    const auto savedName = processor->saveCapturedProfilePreset();
     t.expect (savedName.isNotEmpty(),
               "SAVED: successful Learn can be persisted to the captured Profile Bank");
 
-    const auto names = processor.getCapturedProfilePresetNames();
+    const auto names = processor->getCapturedProfilePresetNames();
     t.expect (names.contains (savedName),
               "SAVED: captured Profile Bank enumerates the saved profile snapshot");
 
     juce::MemoryBlock sessionState;
-    processor.getStateInformation (sessionState);
+    processor->getStateInformation (sessionState);
 
-    SmartDenoiseAudioProcessor sessionRestored;
-    sessionRestored.setStateInformation (sessionState.getData(),
-                                         static_cast<int> (sessionState.getSize()));
-    sessionRestored.prepareToPlay (sampleRate, blockSize);
+    auto sessionRestored = std::make_unique<SmartDenoiseAudioProcessor>();
+    sessionRestored->setStateInformation (sessionState.getData(),
+                                          static_cast<int> (sessionState.getSize()));
+    sessionRestored->prepareToPlay (sampleRate, blockSize);
 
-    t.expect (sessionRestored.getEngine().hasProfile(),
+    t.expect (sessionRestored->getEngine().hasProfile(),
               "RESTORED: host session state restores the frozen profile");
-    t.expect (fingerprintEnergy (sessionRestored.getEngine()) > 0.1f,
+    t.expect (fingerprintEnergy (sessionRestored->getEngine()) > 0.1f,
               "RESTORED: host session restore republishes the captured fingerprint");
 
-    SmartDenoiseAudioProcessor bankRestored;
-    bankRestored.prepareToPlay (sampleRate, blockSize);
-    setRawParameter (bankRestored, "reduction", 3.0f);
-    setRawParameter (bankRestored, "preserve", 0.20f);
-    setRawParameter (bankRestored, "silence", 0.10f);
-    setRawParameter (bankRestored, "thresholdOffset", -1.0f);
+    auto bankRestored = std::make_unique<SmartDenoiseAudioProcessor>();
+    bankRestored->prepareToPlay (sampleRate, blockSize);
+    setRawParameter (*bankRestored, "reduction", 3.0f);
+    setRawParameter (*bankRestored, "preserve", 0.20f);
+    setRawParameter (*bankRestored, "silence", 0.10f);
+    setRawParameter (*bankRestored, "thresholdOffset", -1.0f);
 
-    t.expect (bankRestored.loadCapturedProfilePreset (savedName),
+    t.expect (bankRestored->loadCapturedProfilePreset (savedName),
               "RESTORED: compatible captured Profile Bank entry loads successfully");
-    t.expect (bankRestored.getEngine().hasProfile(),
+    t.expect (bankRestored->getEngine().hasProfile(),
               "RESTORED: Profile Bank load makes the saved frozen profile active");
-    t.expect (fingerprintEnergy (bankRestored.getEngine()) > 0.1f,
+    t.expect (fingerprintEnergy (bankRestored->getEngine()) > 0.1f,
               "RESTORED: Profile Bank load restores the spectral fingerprint");
-    t.expect (std::abs (getRawParameter (bankRestored, "reduction") - 11.7f) < 0.11f,
+    t.expect (std::abs (getRawParameter (*bankRestored, "reduction") - 11.7f) < 0.11f,
               "RESTORED: Profile Bank restores Reduction");
-    t.expect (std::abs (getRawParameter (bankRestored, "preserve") - 0.82f) < 0.02f,
+    t.expect (std::abs (getRawParameter (*bankRestored, "preserve") - 0.82f) < 0.02f,
               "RESTORED: Profile Bank restores Preserve Detail");
-    t.expect (std::abs (getRawParameter (bankRestored, "silence") - 0.43f) < 0.02f,
+    t.expect (std::abs (getRawParameter (*bankRestored, "silence") - 0.43f) < 0.02f,
               "RESTORED: Profile Bank restores Silence Clean-up");
-    t.expect (std::abs (getRawParameter (bankRestored, "thresholdOffset") - 2.4f) < 0.11f,
+    t.expect (std::abs (getRawParameter (*bankRestored, "thresholdOffset") - 2.4f) < 0.11f,
               "RESTORED: Profile Bank restores Profile Offset");
 
-    SmartDenoiseAudioProcessor incompatible;
-    setRawParameter (incompatible, "quality", 1.0f);
-    incompatible.prepareToPlay (sampleRate, blockSize);
+    auto incompatible = std::make_unique<SmartDenoiseAudioProcessor>();
+    setRawParameter (*incompatible, "quality", 1.0f);
+    incompatible->prepareToPlay (sampleRate, blockSize);
 
-    t.expect (! incompatible.getCapturedProfilePresetNames().contains (savedName),
+    t.expect (! incompatible->getCapturedProfilePresetNames().contains (savedName),
               "QUALITY SAFETY: incompatible Clean/Live snapshot is hidden from the bank");
-    t.expect (! incompatible.loadCapturedProfilePreset (savedName),
+    t.expect (! incompatible->loadCapturedProfilePreset (savedName),
               "QUALITY SAFETY: incompatible Clean/Live snapshot is rejected");
 
-    const auto frozenBeforeRejectedLearn = bankRestored.getEngine().serialiseProfile();
+    const auto frozenBeforeRejectedLearn = bankRestored->getEngine().serialiseProfile();
     std::uint32_t randomState = 0xBADC0FFEu;
-    bankRestored.startNoiseLearn();
-    processGenerated (bankRestored,
+    bankRestored->startNoiseLearn();
+    processGenerated (*bankRestored,
                       static_cast<int> (sampleRate * 3.6),
                       [&randomState] (std::int64_t, int channel)
                       {
@@ -233,13 +237,17 @@ void testRealWorkflow (TestContext& t)
                           return (random * 2.0f - 1.0f) * 0.22f;
                       });
 
-    t.expect (bankRestored.getEngine().wasLastLearnRejected(),
+    t.expect (bankRestored->getEngine().wasLastLearnRejected(),
               "REJECTED RELEARN: contaminated capture is rejected");
-    t.expect (bankRestored.getEngine().hasProfile(),
+    t.expect (bankRestored->getEngine().hasProfile(),
               "REJECTED RELEARN: previous valid profile remains active");
-    t.expect (bankRestored.getEngine().serialiseProfile() == frozenBeforeRejectedLearn,
+    t.expect (bankRestored->getEngine().serialiseProfile() == frozenBeforeRejectedLearn,
               "REJECTED RELEARN: frozen profile bytes remain unchanged");
 
+    incompatible.reset();
+    bankRestored.reset();
+    sessionRestored.reset();
+    processor.reset();
     clearProfileDirectoryEnvironment();
     profileDirectory.deleteRecursively();
 }
