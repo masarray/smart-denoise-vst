@@ -1,0 +1,47 @@
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+processor_h = (ROOT / "Source/Plugin/PluginProcessor.h").read_text(encoding="utf-8")
+processor_cpp = (ROOT / "Source/Plugin/PluginProcessor.cpp").read_text(encoding="utf-8")
+product_tests = (ROOT / "tests/SmartDenoiseProductTests.cpp").read_text(encoding="utf-8")
+listening = (ROOT / "tests/SmartDenoiseListeningHarness.cpp").read_text(encoding="utf-8")
+ci = (ROOT / ".github/workflows/source-audit.yml").read_text(encoding="utf-8")
+release = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+
+checks = []
+def check(name, condition): checks.append((name, bool(condition)))
+
+check("P5.3 headless processor test seam", "SMART_DENOISE_HEADLESS_PROCESSOR_TEST" in processor_h and "SMART_DENOISE_HEADLESS_PROCESSOR_TEST" in processor_cpp)
+check("P5.3 profile bank uses isolated test override", "SMART_DENOISE_PROFILE_BANK_DIR" in processor_cpp)
+check("P5.3 real processor workflow target", "SmartDenoiseProductTests" in cmake and "SmartDenoise.ProductWorkflow" in cmake)
+check("P5.3 workflow tests EMPTY/CAPTURING/ACTIVE", all(x in product_tests for x in ['"EMPTY:', '"CAPTURING:', '"ACTIVE:']))
+check("P5.3 workflow tests SAVED/RESTORED", all(x in product_tests for x in ['"SAVED:', '"RESTORED:']))
+check("P5.3 workflow tests quality safety", '"QUALITY SAFETY:' in product_tests and 'loadCapturedProfilePreset' in product_tests)
+check("P5.3 workflow tests rejected relearn", '"REJECTED RELEARN:' in product_tests and 'wasLastLearnRejected' in product_tests)
+check("P5.3 workflow tests host session restore", "getStateInformation" in product_tests and "setStateInformation" in product_tests)
+check("P5.3 listening harness target", "SmartDenoiseListeningHarness" in cmake)
+check("P5.3 listening hiss fixture", '"01-stationary-hiss"' in listening)
+check("P5.3 listening hum fixture", '"02-50hz-hum"' in listening)
+check("P5.3 listening fan fixture", '"03-broadband-fan"' in listening)
+check("P5.3 listening speech fixture", '"04-speech-like"' in listening)
+check("P5.3 listening transient fixture", '"05-transient-cymbal"' in listening)
+check("P5.3 listening pluck fixture", '"06-guitar-pluck"' in listening)
+check("P5.3 listening reverb fixture", '"07-reverb-tail"' in listening)
+check("P5.3 listening output includes WAV and metrics", "writeWav16Mono" in listening and '"metrics.csv"' in listening and '"LISTENING_GUIDE.txt"' in listening)
+check("P5.3 metrics explicitly not subjective approval", "not subjective approval" in listening.lower())
+check("P5.3 CI runs source contract", "verify_p53_validation.py" in ci)
+check("P5.3 CI runs listening harness", "P5.3 listening validation pack" in ci and "listening-validation" in ci)
+check("P5.3 CI uploads workflow report", "product-workflow.txt" in ci and "validation-reports" in ci)
+check("P5.3 CI uploads listening artifacts", "listening-validation/**" in ci)
+check("P5.3 release repeats source contract", "verify_p53_validation.py" in release)
+check("P5.3 release executes listening validation", "P5.3 listening validation pack" in release)
+check("P5.3 keeps frozen profile model", "Adaptive Mode" not in product_tests and "MCRA" not in listening)
+
+failed = [name for name, ok in checks if not ok]
+print("SMART DENOISE P5.3 REAL WORKFLOW + LISTENING CONTRACT")
+print("======================================================")
+for name, ok in checks:
+    print(f"[{'PASS' if ok else 'FAIL'}] {name}")
+print(f"Checks: {len(checks)}  Passed: {len(checks)-len(failed)}  Failed: {len(failed)}")
+raise SystemExit(1 if failed else 0)
