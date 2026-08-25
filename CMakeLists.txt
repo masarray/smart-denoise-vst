@@ -98,6 +98,9 @@ if(SMART_DENOISE_BUILD_TESTS)
     juce_add_console_app(SmartDenoiseProductTests
         PRODUCT_NAME "Smart Denoise Product Tests"
     )
+    set_target_properties(SmartDenoiseProductTests PROPERTIES
+        OUTPUT_NAME "Smart Denoise Product Tests"
+    )
 
     target_sources(SmartDenoiseProductTests PRIVATE
         ${SMART_DENOISE_ENGINE_SOURCES}
@@ -128,6 +131,9 @@ if(SMART_DENOISE_BUILD_TESTS)
 
     juce_add_console_app(SmartDenoiseListeningHarness
         PRODUCT_NAME "Smart Denoise Listening Harness"
+    )
+    set_target_properties(SmartDenoiseListeningHarness PROPERTIES
+        OUTPUT_NAME "Smart Denoise Listening Harness"
     )
 
     target_sources(SmartDenoiseListeningHarness PRIVATE
