@@ -48,11 +48,14 @@ jobs:
       - name: Validate P5.2 profile workflow contract
         run: python qa/verify_p52_profile_workflow.py
 
+      - name: Validate P5.3 workflow and listening contract
+        run: python qa/verify_p53_validation.py
+
   windows-build:
     name: Windows VST3 + Standalone + pluginval
     needs: source-audit
     runs-on: windows-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
 
     steps:
       - uses: actions/checkout@v6
@@ -65,9 +68,34 @@ jobs:
         shell: pwsh
         run: cmake --build build --config Release --parallel 2
 
-      - name: Engine black-box tests
+      - name: Engine and product workflow tests
         shell: pwsh
         run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Capture P5.3 product workflow report
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force validation-reports | Out-Null
+          $productTests = Get-ChildItem -Path build -Recurse -File -Filter 'Smart Denoise Product Tests.exe' |
+            Select-Object -First 1
+          if ($null -eq $productTests) { throw 'Smart Denoise Product Tests.exe was not produced' }
+
+          & $productTests.FullName 2>&1 | Tee-Object -FilePath validation-reports/product-workflow.txt
+          if ($LASTEXITCODE -ne 0) { throw "Product workflow tests failed with exit code $LASTEXITCODE" }
+          if (-not (Test-Path 'validation-reports/product-workflow.txt')) { throw 'P5.3 workflow report missing' }
+
+      - name: Generate P5.3 listening validation pack
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force listening-validation | Out-Null
+          $listeningHarness = Get-ChildItem -Path build -Recurse -File -Filter 'Smart Denoise Listening Harness.exe' |
+            Select-Object -First 1
+          if ($null -eq $listeningHarness) { throw 'Smart Denoise Listening Harness.exe was not produced' }
+
+          & $listeningHarness.FullName "$PWD/listening-validation"
+          if ($LASTEXITCODE -ne 0) { throw "P5.3 listening validation failed with exit code $LASTEXITCODE" }
+          if (-not (Test-Path 'listening-validation/metrics.csv')) { throw 'P5.3 metrics.csv missing' }
+          if (-not (Test-Path 'listening-validation/LISTENING_GUIDE.txt')) { throw 'P5.3 listening guide missing' }
 
       - name: Locate build products
         shell: pwsh
@@ -89,7 +117,7 @@ jobs:
           Write-Host "VST3: $($vst.FullName)"
           Write-Host "Standalone: $($standalone.FullName)"
 
-      - name: Capture mandatory P5.2 plugin visual
+      - name: Capture mandatory P5.3 plugin visual
         id: ui_capture
         shell: pwsh
         run: |
@@ -183,7 +211,7 @@ jobs:
             $pluginLeft = $target.Rect.Left + [int] [Math]::Floor(($target.Width - $pluginWidth) / 2.0)
             $pluginTop = $target.Rect.Bottom - $pluginHeight
 
-            $pngPath = Join-Path $PWD 'ui-snapshot/Smart-Denoise-P5.2-runtime.png'
+            $pngPath = Join-Path $PWD 'ui-snapshot/Smart-Denoise-P5.3-runtime.png'
             $bitmap = New-Object System.Drawing.Bitmap($pluginWidth, $pluginHeight)
             $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
             try {
@@ -269,8 +297,14 @@ jobs:
             -DestinationPath Smart-Denoise-Windows-CI.zip `
             -Force
 
-          if (-not (Test-Path 'ui-snapshot/Smart-Denoise-P5.2-runtime.png')) {
-            throw 'Mandatory P5.2 runtime screenshot missing before artifact upload'
+          if (-not (Test-Path 'ui-snapshot/Smart-Denoise-P5.3-runtime.png')) {
+            throw 'Mandatory P5.3 runtime screenshot missing before artifact upload'
+          }
+          if (-not (Test-Path 'validation-reports/product-workflow.txt')) {
+            throw 'Mandatory P5.3 workflow report missing before artifact upload'
+          }
+          if (-not (Test-Path 'listening-validation/metrics.csv')) {
+            throw 'Mandatory P5.3 listening metrics missing before artifact upload'
           }
 
       - name: Upload Windows build
@@ -280,6 +314,8 @@ jobs:
           path: |
             Smart-Denoise-Windows-CI.zip
             pluginval-logs/**
-            ui-snapshot/Smart-Denoise-P5.2-runtime.png
+            ui-snapshot/Smart-Denoise-P5.3-runtime.png
+            validation-reports/**
+            listening-validation/**
           if-no-files-found: error
           retention-days: 14
