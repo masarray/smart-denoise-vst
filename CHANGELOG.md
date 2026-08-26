@@ -38,8 +38,9 @@
 - P4.6 visual contract explicitly rejects translucent knob overlays, requires perimeter-only 3D knob edges with a flat machined face, and requires Learn Noise to render as a raised clickable circular button.
 - P4.6 syntax scope was restored after the first MSVC pass exposed a missing brace in the machining clip block; final validation is run from a normal user commit.
 - P5.2 adds a dedicated profile-workflow contract plus native black-box checks that both a learned profile and a restored profile publish a non-empty spectral fingerprint.
-- CI requires P0-P5.2 QA, native Windows build, C++ black-box tests, mandatory clean 940×540 runtime plugin screenshot and pluginval strictness 5.
-- Release workflow repeats Concept C + P4 + P5 + P5.2 gates before public publishing.
+- P5.3 adds a permanent workflow/listening contract, a real processor state-machine test, reproducible listening WAV/metrics artifacts, and moves the large listening-test DSP engine off the Windows stack to avoid harness-only fast-fail without touching production DSP.
+- CI requires P0-P5.3 QA, native Windows build, engine + product workflow tests, mandatory listening validation pack, mandatory clean 940×540 runtime plugin screenshot and pluginval strictness 5.
+- Release workflow repeats Concept C + P4 + P5 + P5.2 + P5.3 gates before public publishing.
 - Target public release: v0.4.0.
 
 ## 0.3.0 - release candidate
