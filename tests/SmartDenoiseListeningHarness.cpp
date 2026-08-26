@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -333,17 +334,17 @@ FixtureResult runFixture (const std::function<float(std::int64_t)>& profileNoise
                           float reductionDb = 12.0f,
                           float preserve = 0.80f)
 {
-    smartdenoise::SmartDenoiseEngine engine;
-    engine.prepare (sampleRate, blockSize, channels);
-    engine.setSilenceAmount (0.0f);
-    engine.setReductionDb (reductionDb);
-    engine.setPreserve (preserve);
-    learnProfile (engine, profileNoise);
+    auto engine = std::make_unique<smartdenoise::SmartDenoiseEngine>();
+    engine->prepare (sampleRate, blockSize, channels);
+    engine->setSilenceAmount (0.0f);
+    engine->setReductionDb (reductionDb);
+    engine->setPreserve (preserve);
+    learnProfile (*engine, profileNoise);
 
-    if (! engine.hasProfile())
+    if (! engine->hasProfile())
         throw std::runtime_error ("Listening fixture profile Learn was rejected");
 
-    return { clean, noisy, processAligned (engine, noisy) };
+    return { clean, noisy, processAligned (*engine, noisy) };
 }
 
 void saveFixture (const std::filesystem::path& root,
