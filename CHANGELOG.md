@@ -39,6 +39,7 @@
 - P4.6 syntax scope was restored after the first MSVC pass exposed a missing brace in the machining clip block; final validation is run from a normal user commit.
 - P5.2 adds a dedicated profile-workflow contract plus native black-box checks that both a learned profile and a restored profile publish a non-empty spectral fingerprint.
 - P5.3 adds a permanent workflow/listening contract, a real processor state-machine test, reproducible listening WAV/metrics artifacts, and moves the large listening-test DSP engine off the Windows stack to avoid harness-only fast-fail without touching production DSP.
+- P5.3 now includes a fast Windows validation lane plus fixture/prepare/learn/process/save checkpoints so listening-harness failures can be localized before the full VST3 + pluginval lane finishes.
 - CI requires P0-P5.3 QA, native Windows build, engine + product workflow tests, mandatory listening validation pack, mandatory clean 940×540 runtime plugin screenshot and pluginval strictness 5.
 - Release workflow repeats Concept C + P4 + P5 + P5.2 + P5.3 gates before public publishing.
 - Target public release: v0.4.0.
