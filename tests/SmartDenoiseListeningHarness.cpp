@@ -328,29 +328,41 @@ struct FixtureResult
     std::vector<float> processed;
 };
 
+void checkpoint (const std::string& message)
+{
+    std::cerr << "[P5.3] " << message << std::endl;
+}
+
 FixtureResult runFixture (const std::function<float(std::int64_t)>& profileNoise,
                           const std::vector<float>& clean,
                           const std::vector<float>& noisy,
                           float reductionDb = 12.0f,
                           float preserve = 0.80f)
 {
+    checkpoint ("runFixture: allocate engine");
     auto engine = std::make_unique<smartdenoise::SmartDenoiseEngine>();
+    checkpoint ("runFixture: prepare");
     engine->prepare (sampleRate, blockSize, channels);
     engine->setSilenceAmount (0.0f);
     engine->setReductionDb (reductionDb);
     engine->setPreserve (preserve);
+    checkpoint ("runFixture: learn profile");
     learnProfile (*engine, profileNoise);
 
     if (! engine->hasProfile())
         throw std::runtime_error ("Listening fixture profile Learn was rejected");
 
-    return { clean, noisy, processAligned (*engine, noisy) };
+    checkpoint ("runFixture: process aligned");
+    auto processed = processAligned (*engine, noisy);
+    checkpoint ("runFixture: complete");
+    return { clean, noisy, std::move (processed) };
 }
 
 void saveFixture (const std::filesystem::path& root,
                   const std::string& name,
                   const FixtureResult& result)
 {
+    checkpoint ("saveFixture: " + name);
     const auto directory = root / name;
     std::filesystem::create_directories (directory);
     writeWav16Mono (directory / "01-clean-reference.wav", result.clean);
@@ -386,6 +398,7 @@ int main (int argc, char** argv)
 
     const auto silence = std::vector<float> (static_cast<size_t> (sampleCount), 0.0f);
 
+    checkpoint ("fixture 01 stationary hiss");
     const auto hiss = makeSignal ([] (std::int64_t n) { return hissNoise (n + 400000, 9u); });
     auto hissResult = runFixture (
         [] (std::int64_t n) { return hissNoise (n, 2u); }, silence, hiss, 12.0f, 0.78f);
@@ -393,6 +406,7 @@ int main (int argc, char** argv)
     addGateMetric (metrics, "stationary-hiss", "noise_attenuation",
                    dbRatio (rms (hissResult.noisy), rms (hissResult.processed)), "dB", 1.5);
 
+    checkpoint ("fixture 02 50 Hz hum");
     const auto hum = makeSignal ([] (std::int64_t n) { return humNoise (n + 17000); });
     auto humResult = runFixture (
         [] (std::int64_t n) { return humNoise (n); }, silence, hum, 12.0f, 0.78f);
@@ -400,6 +414,7 @@ int main (int argc, char** argv)
     addGateMetric (metrics, "50hz-hum", "noise_attenuation",
                    dbRatio (rms (humResult.noisy), rms (humResult.processed)), "dB", 1.5);
 
+    checkpoint ("fixture 03 broadband fan");
     const auto fan = makeSignal ([] (std::int64_t n) { return fanNoise (n + 250000, 23u); });
     auto fanResult = runFixture (
         [] (std::int64_t n) { return fanNoise (n, 17u); }, silence, fan, 12.0f, 0.78f);
@@ -407,6 +422,7 @@ int main (int argc, char** argv)
     addGateMetric (metrics, "broadband-fan", "noise_attenuation",
                    dbRatio (rms (fanResult.noisy), rms (fanResult.processed)), "dB", 0.75);
 
+    checkpoint ("fixture 04 speech-like");
     const auto speechClean = makeSignal ([] (std::int64_t n) { return speechLike (n); });
     const auto speechNoise = makeSignal ([] (std::int64_t n) { return hissNoise (n + 800000, 13u); });
     auto speechResult = runFixture (
@@ -417,6 +433,7 @@ int main (int argc, char** argv)
     addGateMetric (metrics, "speech-like", "program_rms_retention",
                    dbRatio (rms (speechResult.processed), rms (speechResult.clean)), "dB", -4.0);
 
+    checkpoint ("fixture 05 transient-cymbal");
     const auto transientClean = makeSignal ([] (std::int64_t n) { return transientLike (n); });
     const auto transientNoise = makeSignal ([] (std::int64_t n) { return hissNoise (n + 1200000, 19u); });
     auto transientResult = runFixture (
@@ -427,6 +444,7 @@ int main (int argc, char** argv)
     addGateMetric (metrics, "transient-cymbal", "peak_retention",
                    peak (transientResult.processed) / std::max (peak (transientResult.clean), 1.0e-9), "ratio", 0.55);
 
+    checkpoint ("fixture 06 guitar-pluck");
     const auto pluckClean = makeSignal ([] (std::int64_t n) { return pluckLike (n); });
     const auto pluckNoise = makeSignal ([] (std::int64_t n) { return fanNoise (n + 900000, 37u); });
     auto pluckResult = runFixture (
@@ -437,6 +455,7 @@ int main (int argc, char** argv)
     addGateMetric (metrics, "guitar-pluck", "program_rms_retention",
                    rms (pluckResult.processed) / std::max (rms (pluckResult.clean), 1.0e-9), "ratio", 0.50);
 
+    checkpoint ("fixture 07 reverb-tail");
     const auto reverbClean = makeSignal ([] (std::int64_t n) { return reverbLike (n); });
     const auto reverbNoise = makeSignal ([] (std::int64_t n) { return hissNoise (n + 1400000, 29u); });
     auto reverbResult = runFixture (
