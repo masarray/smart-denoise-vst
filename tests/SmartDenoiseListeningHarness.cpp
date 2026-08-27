@@ -350,8 +350,15 @@ FixtureResult runFixture (const std::function<float(std::int64_t)>& profileNoise
     learnProfile (*engine, profileNoise);
 
     if (! engine->hasProfile())
+    {
+        std::cerr << "[P5.3] runFixture: Learn rejected; quality="
+                  << engine->getProfileQuality()
+                  << " rejectedFrames=" << engine->getRejectedLearningFrames()
+                  << std::endl;
         throw std::runtime_error ("Listening fixture profile Learn was rejected");
+    }
 
+    checkpoint ("runFixture: Learn accepted");
     checkpoint ("runFixture: process aligned");
     auto processed = processAligned (*engine, noisy);
     checkpoint ("runFixture: complete");

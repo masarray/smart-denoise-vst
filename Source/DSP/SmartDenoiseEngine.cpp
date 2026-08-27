@@ -794,9 +794,14 @@ void SmartDenoiseEngine::accumulateLearningFrame (
         ! std::isfinite (framePower)
         || framePower < 0.0f;
 
+    // Stationary stochastic noise naturally has high frame-to-frame spectral
+    // flux. Treat flux as capture contamination only when it arrives with a
+    // meaningful broadband level rise; otherwise real hiss/fan captures would
+    // be rejected even though their long-term spectrum is stable.
     const bool transientContamination =
         ! warmup
-        && transientScore > 0.70f;
+        && transientScore > 0.82f
+        && levelDeltaDb > 2.5f;
 
     const bool levelContamination =
         ! warmup

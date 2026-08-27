@@ -40,6 +40,24 @@ float stationarySample (std::int64_t sampleIndex, float scale = 1.0f)
                   + 0.005f * std::sin (static_cast<float> (juce::MathConstants<double>::twoPi * f2 * t)));
 }
 
+float deterministicNoise (std::int64_t sampleIndex, std::uint32_t seed)
+{
+    std::uint32_t x = static_cast<std::uint32_t> (sampleIndex) + seed * 0x9e3779b9u;
+    x ^= x >> 16;
+    x *= 0x7feb352du;
+    x ^= x >> 15;
+    x *= 0x846ca68bu;
+    x ^= x >> 16;
+    return static_cast<float> (x) / static_cast<float> (0xffffffffu) * 2.0f - 1.0f;
+}
+
+float stationaryHissSample (std::int64_t sampleIndex)
+{
+    const float current = deterministicNoise (sampleIndex, 2u);
+    const float previous = deterministicNoise (sampleIndex - 1, 2u);
+    return (current - 0.78f * previous) * 0.0105f;
+}
+
 void processGenerated (smartdenoise::SmartDenoiseEngine& engine,
                        int totalSamples,
                        int channels,
@@ -192,6 +210,32 @@ void testLearningAndPersistence (TestContext& t)
     t.expect (! incompatible->restoreProfile (encoded), "FFT-grid mismatch rejects profile restore");
 }
 
+void testBroadbandHissLearning (TestContext& t)
+{
+    auto engine = std::make_unique<smartdenoise::SmartDenoiseEngine>();
+    engine->setQuality (smartdenoise::SmartDenoiseEngine::Quality::live1024);
+    engine->prepare (sampleRate, blockSize, 2);
+    engine->setSilenceAmount (0.0f);
+    engine->startLearning (3.0);
+
+    processGenerated (*engine,
+                      static_cast<int> (sampleRate * 3.6),
+                      2,
+                      [] (std::int64_t n, int) { return stationaryHissSample (n); });
+
+    t.expect (engine->hasProfile(),
+              "Stationary stochastic hiss Learn creates a valid profile");
+    t.expect (! engine->wasLastLearnRejected(),
+              "Stationary stochastic hiss is not misclassified as transient contamination");
+    t.expect (engine->getProfileQuality() >= 0.25f,
+              "Stationary stochastic hiss profile passes quality gate");
+
+    const auto fingerprint = engine->getProfileDisplay();
+    t.expect (std::any_of (fingerprint.begin(), fingerprint.end(),
+                          [] (float value) { return value > 0.05f; }),
+              "Stationary stochastic hiss publishes a captured-profile fingerprint");
+}
+
 void testRejectedRelearnKeepsProfile (TestContext& t)
 {
     smartdenoise::SmartDenoiseEngine engine;
@@ -332,6 +376,7 @@ int main()
     testSetupLevelQuality (tests);
     testClamps (tests);
     testLearningAndPersistence (tests);
+    testBroadbandHissLearning (tests);
     testRejectedRelearnKeepsProfile (tests);
     testAttenuationAndProtection (tests);
     testP3FrozenProfileAndDetailGuard (tests);
