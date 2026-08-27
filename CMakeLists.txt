@@ -67,7 +67,7 @@ target_link_libraries(SmartDenoise PRIVATE
 
 if(SMART_DENOISE_BUILD_TESTS)
     # P5.3 fast-validation targets intentionally stay separate from plugin packaging,
-    # including the stationary broadband-noise Learn regression used by the listening lane.
+    # covering both stationary broadband-noise Learn acceptance and program-contamination rejection.
     juce_add_console_app(SmartDenoiseTests
         PRODUCT_NAME "Smart Denoise Tests"
     )
