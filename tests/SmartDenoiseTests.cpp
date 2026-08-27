@@ -244,17 +244,25 @@ void testRejectedRelearnKeepsProfile (TestContext& t)
     learnStationaryProfile (engine);
     t.expect (engine.hasProfile(), "Precondition profile exists before bad Relearn");
 
-    std::uint32_t state = 0x12345678u;
     engine.startLearning (3.0);
     processGenerated (engine,
                       static_cast<int> (sampleRate * 3.6),
                       2,
-                      [&state] (std::int64_t, int channel)
+                      [] (std::int64_t n, int channel)
                       {
-                          state = state * 1664525u + 1013904223u + static_cast<std::uint32_t> (channel);
-                          const float random = static_cast<float> ((state >> 8) & 0x00ffffffu)
-                                             / static_cast<float> (0x00ffffffu);
-                          return (random * 2.0f - 1.0f) * 0.22f;
+                          const auto quietLead = static_cast<std::int64_t> (sampleRate * 0.20);
+                          const float noise = stationarySample (n);
+                          if (n < quietLead)
+                              return noise;
+
+                          const double time = static_cast<double> (n) / sampleRate;
+                          const float stereoPhase = channel == 0 ? 0.0f : 0.35f;
+                          const float program =
+                              0.13f * std::sin (static_cast<float> (
+                                  juce::MathConstants<double>::twoPi * 230.0 * time + stereoPhase))
+                            + 0.09f * std::sin (static_cast<float> (
+                                  juce::MathConstants<double>::twoPi * 1840.0 * time + 0.5 * stereoPhase));
+                          return noise + program;
                       });
 
     t.expect (engine.wasLastLearnRejected(), "Contaminated Relearn is rejected");

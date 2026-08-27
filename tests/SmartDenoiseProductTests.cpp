@@ -224,17 +224,24 @@ void testRealWorkflow (TestContext& t)
               "QUALITY SAFETY: incompatible Clean/Live snapshot is rejected");
 
     const auto frozenBeforeRejectedLearn = bankRestored->getEngine().serialiseProfile();
-    std::uint32_t randomState = 0xBADC0FFEu;
     bankRestored->startNoiseLearn();
     processGenerated (*bankRestored,
                       static_cast<int> (sampleRate * 3.6),
-                      [&randomState] (std::int64_t, int channel)
+                      [] (std::int64_t n, int channel)
                       {
-                          randomState = randomState * 1664525u + 1013904223u
-                              + static_cast<std::uint32_t> (channel);
-                          const float random = static_cast<float> ((randomState >> 8) & 0x00ffffffu)
-                              / static_cast<float> (0x00ffffffu);
-                          return (random * 2.0f - 1.0f) * 0.22f;
+                          const auto quietLead = static_cast<std::int64_t> (sampleRate * 0.20);
+                          const float noise = stationarySample (n);
+                          if (n < quietLead)
+                              return noise;
+
+                          const double time = static_cast<double> (n) / sampleRate;
+                          const float stereoPhase = channel == 0 ? 0.0f : 0.35f;
+                          const float program =
+                              0.13f * std::sin (static_cast<float> (
+                                  juce::MathConstants<double>::twoPi * 230.0 * time + stereoPhase))
+                            + 0.09f * std::sin (static_cast<float> (
+                                  juce::MathConstants<double>::twoPi * 1840.0 * time + 0.5 * stereoPhase));
+                          return noise + program;
                       });
 
     t.expect (bankRestored->getEngine().wasLastLearnRejected(),
