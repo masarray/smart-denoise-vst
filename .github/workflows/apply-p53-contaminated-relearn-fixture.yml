@@ -1,0 +1,39 @@
+name: Apply P5.3 contaminated Relearn fixture correction
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-p53-contaminated-relearn-fixture.yml'
+      - 'tools/p53_fix_contaminated_relearn_fixture.py'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/ship-v0.3-rc'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Apply fixture correction
+        run: python tools/p53_fix_contaminated_relearn_fixture.py
+      - name: Validate contracts
+        run: |
+          python qa/verify_p0_p2_contract.py
+          python qa/verify_p53_validation.py
+          git diff --check
+      - name: Commit final fixture correction and remove one-shot machinery
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm -f .github/workflows/apply-p53-contaminated-relearn-fixture.yml tools/p53_fix_contaminated_relearn_fixture.py
+          git add tests/SmartDenoiseTests.cpp tests/SmartDenoiseProductTests.cpp
+          git diff --cached --check
+          git commit -m 'P5.3: make rejected Relearn test use real program contamination'
+          git push origin HEAD:agent/ship-v0.3-rc
